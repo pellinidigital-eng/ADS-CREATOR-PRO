@@ -42,6 +42,8 @@ const compact = (value: string): string => value.trim().replace(/\s+/g, " ").rep
 
 const sentenceCase = (value: string): string => value.charAt(0).toUpperCase() + value.slice(1);
 
+const lowerFirst = (value: string): string => value.charAt(0).toLowerCase() + value.slice(1);
+
 const limit = (text: string, max: number): string => {
   const cleaned = cleanCopy(text);
   return cleaned.length <= max ? cleaned : `${cleaned.slice(0, max - 1).trim()}…`;
@@ -244,6 +246,50 @@ function isDigital(c: NormalizedInput) {
   return c.productCategory === "digital";
 }
 
+function audiencePhrase(c: NormalizedInput): string {
+  const audience = lowerFirst(c.normalizedAudience);
+
+  if (hasAny(audience, ["parte da zero", "principianti", "non sa", "da zero"])) return "chi parte da zero";
+  if (isDigital(c)) return "chi vuole creare qualcosa di proprio online";
+  if (c.productCategory === "service") return "professionisti e freelance che vogliono vendere servizi con più chiarezza";
+  if (c.productCategory === "ecommerce") return "chi vende online e vuole rendere l'offerta più immediata";
+  if (c.productCategory === "local") return "piccoli business locali che vogliono farsi scegliere più facilmente";
+  return audience;
+}
+
+function adPromiseFor(c: NormalizedInput, seed = 0): string {
+  const audience = audiencePhrase(c);
+  const digitalPromises = [
+    `${c.productName} aiuta ${audience} a trasformare un'idea confusa in un primo prodotto digitale, seguendo passaggi semplici e ordinati.`,
+    `${c.productName} è pensato per chi vuole partire online senza perdersi tra tutorial, dubbi e idee lasciate a metà.`,
+    `${c.productName} guida ${audience} verso una prima offerta digitale chiara: idea, pubblico, promessa e prossimi passi.`,
+    `${c.productName} porta ordine tra idea, pubblico e offerta, così il primo prodotto digitale diventa più facile da costruire.`
+  ];
+  const generalPromises = [
+    `${c.productName} trasforma un'offerta difficile da spiegare in un messaggio più chiaro da testare.`,
+    `${c.productName} è pensato per ${audience}: aiuta a chiarire problema, promessa e CTA prima di lanciare.`,
+    `${c.productName} porta ordine nel copy, così ogni annuncio parte da un angolo più specifico.`,
+    `${c.productName} guida chi deve promuovere un'offerta verso testi, hook e script più facili da adattare.`
+  ];
+
+  return cleanCopy(pick(isDigital(c) ? digitalPromises : generalPromises, seed));
+}
+
+function chooseBestHeadline(headlines: string[], productName: string): string {
+  const product = productName.toLowerCase();
+  const score = (headline: string) => {
+    const lower = headline.toLowerCase();
+    let points = 0;
+    if (hasAny(lower, ["idea", "prodotto", "parti", "inizia", "direzione", "offerta", "messaggio", "test", "chiarezza"])) points += 4;
+    if (hasAny(lower, ["primo", "digitale", "confusione", "tutorial", "ads"])) points += 2;
+    if (lower === product || lower.includes(product)) points -= 5;
+    if (headline.length > 34) points -= 1;
+    return points;
+  };
+
+  return [...headlines].sort((a, b) => score(b) - score(a))[0] || headlines[0];
+}
+
 function quickAnalysis(input: AdsFormInput): GeneratedAdsOutput["quickAnalysis"] {
   const c = normalizeInput(input);
 
@@ -251,15 +297,13 @@ function quickAnalysis(input: AdsFormInput): GeneratedAdsOutput["quickAnalysis"]
     perceivedProblem: isDigital(c)
       ? `Il pubblico non cerca solo un corso: vuole capire come partire online senza perdersi tra mille consigli diversi.`
       : `Il pubblico non ha bisogno di un'altra frase ad effetto: ha bisogno di capire perché questa offerta risolve un problema reale.`,
-    hiddenDesire: `Vuole ${c.normalizedDesire}, con la sensazione di avere un percorso chiaro e non l'ennesima promessa vaga.`,
-    adPromise: isDigital(c)
-      ? `${c.productName} aiuta ${c.normalizedAudience} a passare da idea confusa a primo prodotto digitale con passi ordinati. Offerta da comunicare: ${c.normalizedOffer}.`
-      : `${c.productName} aiuta ${c.normalizedAudience} a collegare problema, promessa e prossimo passo in modo più chiaro. Offerta da comunicare: ${c.normalizedOffer}.`,
+    hiddenDesire: `Vuole ${c.normalizedDesire}, con la sensazione di avere un percorso chiaro e non l'ennesima promessa vaga. L'offerta va percepita così: ${lowerFirst(c.normalizedOffer)}.`,
+    adPromise: adPromiseFor(c),
     emotionalLever: `Il punto emotivo è togliere confusione: il cliente vuole sentirsi capace di iniziare, anche se oggi non ha ancora un piano preciso.`,
     possibleObjection: `“E se parto da zero o non so ancora quale idea scegliere?”`,
     objectionAnswer: isDigital(c)
       ? `Il messaggio deve rassicurare: non serve avere tutto pronto, serve un percorso pratico per scegliere una prima direzione e costruirla con ordine.`
-      : `Il messaggio deve chiarire che non si parte dalla campagna perfetta, ma da una prima versione ragionata da adattare e testare.`
+      : `Il messaggio deve chiarire che non si parte da una versione definitiva, ma da una prima direzione ragionata da adattare e testare.`
   };
 }
 
@@ -340,18 +384,18 @@ function primaryTexts(input: AdsFormInput, seed: number): string[] {
 
   const digital = [
     `Vuoi creare un prodotto digitale ma non sai da dove partire? ${c.productName} ti guida passo dopo passo.`,
-    `Hai idee, ma nessun piano chiaro? Segui un percorso semplice per costruire il tuo primo prodotto digitale.`,
-    `Non ti serve complicare tutto. Parti da una guida pratica e trasforma una prima idea in qualcosa di tuo.`,
-    `Vuoi iniziare online con un progetto tuo? ${c.productName} ti aiuta a mettere ordine e partire dal primo passo.`,
-    `Prima di perdere settimane tra video e consigli sparsi, segui un metodo ordinato per iniziare.`
+    `Un prodotto digitale non nasce guardando altri tutorial. Nasce quando scegli un'idea, un pubblico e una promessa chiara.`,
+    `Hai salvato decine di video, ma il tuo prodotto digitale non esiste ancora. Forse ti serve meno teoria e più direzione.`,
+    `Prima di creare pagine, grafiche e contenuti, chiarisci cosa vendere e a chi.`,
+    `Parti da un percorso ordinato: idea, pubblico, promessa e prima offerta digitale.`
   ];
 
   const general = [
-    `Il problema non è solo promuovere: è spiegare bene perché scegliere ${c.productName}. Parti da un messaggio più chiaro.`,
-    `Se il tuo pubblico vive questo blocco, ${c.normalizedProblem}, serve un annuncio che arrivi subito al punto.`,
-    `Hai un'offerta valida? Rendila più semplice da capire con testi, hook e CTA pensati per un primo test.`,
-    `Prima di investire budget, sistema promessa e messaggio. ${c.normalizedOffer} merita un copy più chiaro.`,
-    `Il cliente deve capire cosa cambia per lui. Parti da copy più specifici, non da frasi già sentite.`
+    `Il cliente capisce davvero perché scegliere ${c.productName}? Parti da una promessa più chiara prima del prossimo test.`,
+    `Se l'offerta è confusa, anche una buona ads fatica a funzionare.`,
+    `Immagina una campagna con hook, headline e CTA coerenti invece di frasi cambiate a caso.`,
+    `Prima di investire budget, chiarisci cosa cambia per il cliente e quale passo deve fare dopo.`,
+    `Parti da un messaggio chiaro prima di spendere budget.`
   ];
 
   return rotate(isDigital(c) ? digital : general, seed).map((item) => limit(item, 132));
@@ -871,7 +915,11 @@ export function generateAds(input: AdsFormInput): GeneratedAdsOutput {
   const generatedScripts30 = scripts30(input, seed);
   const generatedCanva = canvaPrompts(input, seed);
   const generatedCtas = ctas(input, seed);
-  const bestScript = isDigital(normalized) ? generatedScripts8[0] : generatedScripts15[0];
+  const bestScript = generatedScripts8[0] || (isDigital(normalized) ? generatedScripts15[0] : generatedScripts15[0]);
+  const bestHeadline = chooseBestHeadline(generatedHeadlines, normalized.productName);
+  const bestDescription =
+    generatedDescriptions.find((item) => hasAny(item, ["guida", "metodo", "test", "chiarezza", "percorso"])) ||
+    generatedDescriptions[0];
   const bestCta = isDigital(normalized)
     ? generatedCtas.directSale[0] || "Inizia dal tuo primo prodotto"
     : generatedCtas.urgency[0] || "Prepara il primo test";
@@ -893,8 +941,8 @@ export function generateAds(input: AdsFormInput): GeneratedAdsOutput {
     creativeIdeas: creativeIdeas(input, seed),
     readyCampaign: {
       primaryText: generatedPrimaryTexts[0],
-      headline: generatedHeadlines[0],
-      description: generatedDescriptions[0],
+      headline: bestHeadline,
+      description: bestDescription,
       videoScript: bestScript.steps.join(" "),
       canvaPrompt: `${generatedCanva[0].format}. ${generatedCanva[0].style}. Testo: ${generatedCanva[0].visualText}. CTA: ${generatedCanva[0].visualCta}.`,
       finalCta: bestCta
