@@ -1,6 +1,7 @@
 "use client";
 
 import { Copy, Download, Printer, RefreshCcw, Trash2 } from "lucide-react";
+import type { ReactNode } from "react";
 import type { GeneratedAdsOutput, PromptCanva, SalesAngle, VideoScript } from "@/types/ads";
 
 type OutputSectionProps = {
@@ -101,6 +102,8 @@ function canvaToText(prompt: PromptCanva) {
 function Card({
   id,
   title,
+  description,
+  featured = false,
   children,
   text,
   copiedKey,
@@ -108,18 +111,34 @@ function Card({
 }: {
   id: string;
   title: string;
-  children: React.ReactNode;
+  description?: string;
+  featured?: boolean;
+  children: ReactNode;
   text: string;
   copiedKey: string | null;
   onCopy: (key: string, text: string) => void;
 }) {
   return (
-    <section className="rounded-lg border border-line bg-white p-4 shadow-sm sm:p-5">
-      <div className="mb-4 flex items-start justify-between gap-3">
-        <h3 className="text-lg font-black text-ink">{title}</h3>
+    <section
+      className={
+        featured
+          ? "rounded-[24px] border border-indigo-200 bg-gradient-to-br from-white via-indigo-50/70 to-white p-4 shadow-[0_18px_55px_rgba(79,70,229,0.14)] sm:p-5"
+          : "rounded-[22px] border border-slate-200 bg-white p-4 shadow-sm sm:p-5"
+      }
+    >
+      <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <div className="flex flex-wrap items-center gap-2">
+            <h3 className="text-lg font-black text-slate-950">{title}</h3>
+            {featured ? (
+              <span className="rounded-full bg-indigo-600 px-3 py-1 text-xs font-black text-white">Consigliata</span>
+            ) : null}
+          </div>
+          {description ? <p className="mt-1 text-sm leading-5 text-slate-500">{description}</p> : null}
+        </div>
         <button
           onClick={() => onCopy(id, text)}
-          className="no-print inline-flex min-h-9 shrink-0 items-center gap-2 rounded-md border border-line bg-white px-3 py-2 text-sm font-bold text-slate-700 transition hover:border-blue-200 hover:text-blue-700"
+          className="no-print inline-flex min-h-10 shrink-0 items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm font-black text-slate-700 transition hover:border-indigo-200 hover:text-indigo-700"
         >
           <Copy className="h-4 w-4" />
           {copiedKey === id ? "Copiato!" : "Copia sezione"}
@@ -143,43 +162,52 @@ export function OutputSection({
     return (
       <div
         id="output-preview"
-        className="rounded-lg border border-dashed border-slate-300 bg-white/80 p-6 text-center shadow-sm"
+        className="rounded-[24px] border border-dashed border-slate-300 bg-white/90 p-6 text-center shadow-[0_18px_45px_rgba(15,23,42,0.06)]"
       >
-        <p className="text-lg font-black text-ink">Qui apparirà la tua campagna.</p>
-        <p className="mt-2 text-muted">
+        <p className="text-xl font-black text-slate-950">Qui apparirà la tua campagna</p>
+        <p className="mx-auto mt-2 max-w-xl text-sm leading-6 text-slate-600 sm:text-base">
           Compila il form e genera testi, hook, script, CTA, prompt visual e una campagna pronta da copiare.
         </p>
+        <div className="mt-5 flex flex-wrap justify-center gap-2">
+          {["Hook", "Primary text", "Script video", "Prompt Canva"].map((item) => (
+            <span key={item} className="rounded-full border border-indigo-100 bg-indigo-50 px-3 py-1.5 text-xs font-black text-indigo-700">
+              {item}
+            </span>
+          ))}
+        </div>
       </div>
     );
   }
 
   return (
     <div id="output-preview" className="print-area space-y-5">
-      <div className="rounded-lg border border-line bg-white p-4 shadow-soft sm:p-5">
+      <div className="rounded-[24px] border border-slate-200 bg-white p-4 shadow-[0_18px_55px_rgba(15,23,42,0.08)] sm:p-5">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
           <div>
-            <p className="text-sm font-bold uppercase tracking-normal text-blue-700">Output generato</p>
-            <h2 className="mt-1 text-2xl font-black text-ink">La tua campagna pubblicitaria</h2>
-            <p className="mt-1 text-sm text-muted">Generato il {output.generatedAt}</p>
+            <p className="text-sm font-bold uppercase tracking-normal text-indigo-700">Output generato</p>
+            <h2 className="mt-1 text-2xl font-black text-slate-950">La tua campagna pubblicitaria</h2>
+            <p className="mt-1 text-sm leading-5 text-slate-500">
+              Generato il {output.generatedAt}. Usa questi testi come base: testa 2/3 varianti e confronta i risultati.
+            </p>
           </div>
           <div className="no-print grid grid-cols-2 gap-2 sm:flex">
-            <button onClick={onCopyAll} className="inline-flex min-h-10 items-center justify-center gap-2 rounded-md bg-ink px-3 py-2 text-sm font-bold text-white">
+            <button onClick={onCopyAll} className="inline-flex min-h-12 items-center justify-center gap-2 rounded-2xl bg-slate-950 px-3 py-2 text-sm font-black text-white">
               <Copy className="h-4 w-4" />
               {copiedKey === "all" ? "Copiato!" : "Copia tutto"}
             </button>
-            <button onClick={onDownload} className="inline-flex min-h-10 items-center justify-center gap-2 rounded-md border border-line bg-white px-3 py-2 text-sm font-bold text-slate-700">
+            <button onClick={onDownload} className="inline-flex min-h-12 items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm font-black text-slate-700">
               <Download className="h-4 w-4" />
-              TXT
+              Scarica TXT
             </button>
-            <button onClick={() => window.print()} className="inline-flex min-h-10 items-center justify-center gap-2 rounded-md border border-line bg-white px-3 py-2 text-sm font-bold text-slate-700">
+            <button onClick={() => window.print()} className="inline-flex min-h-12 items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm font-black text-slate-700">
               <Printer className="h-4 w-4" />
               PDF
             </button>
-            <button onClick={onRegenerate} className="inline-flex min-h-10 items-center justify-center gap-2 rounded-md border border-line bg-white px-3 py-2 text-sm font-bold text-slate-700">
+            <button onClick={onRegenerate} className="inline-flex min-h-12 items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm font-black text-slate-700">
               <RefreshCcw className="h-4 w-4" />
               Rigenera
             </button>
-            <button onClick={onReset} className="inline-flex min-h-10 items-center justify-center gap-2 rounded-md border border-line bg-white px-3 py-2 text-sm font-bold text-slate-700">
+            <button onClick={onReset} className="inline-flex min-h-12 items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm font-black text-slate-700">
               <Trash2 className="h-4 w-4" />
               Svuota form
             </button>
@@ -190,6 +218,7 @@ export function OutputSection({
       <Card
         id="quick"
         title="1. Analisi rapida dell’angolo di vendita"
+        description="Il ragionamento strategico dietro messaggi, hook e CTA."
         copiedKey={copiedKey}
         onCopy={onCopy}
         text={Object.values(output.quickAnalysis).join("\n")}
@@ -203,22 +232,22 @@ export function OutputSection({
             ["Possibile obiezione", output.quickAnalysis.possibleObjection],
             ["Risposta all’obiezione", output.quickAnalysis.objectionAnswer]
           ].map(([label, value]) => (
-            <div key={label} className="rounded-md bg-slate-50 p-3">
-              <dt className="text-sm font-black text-ink">{label}</dt>
+            <div key={label} className="rounded-2xl bg-slate-50 p-3">
+              <dt className="text-sm font-black text-slate-950">{label}</dt>
               <dd className="mt-1 leading-6 text-slate-700">{value}</dd>
             </div>
           ))}
         </dl>
       </Card>
 
-      <Card id="angles" title="2. 5 angoli di vendita" copiedKey={copiedKey} onCopy={onCopy} text={output.salesAngles.map((a) => `${a.type}: ${a.title}\n${a.explanation}\n${a.example}`).join("\n\n")}>
+      <Card id="angles" title="2. 5 angoli di vendita" description="Direzioni diverse da testare senza cambiare tutta l’offerta." copiedKey={copiedKey} onCopy={onCopy} text={output.salesAngles.map((a) => `${a.type}: ${a.title}\n${a.explanation}\n${a.example}`).join("\n\n")}>
         <div className="grid gap-3">
           {output.salesAngles.map((angle: SalesAngle) => (
-            <article key={angle.type} className="rounded-md bg-slate-50 p-3">
-              <p className="text-sm font-black text-blue-700">{angle.type}</p>
-              <h4 className="mt-1 font-black text-ink">{angle.title}</h4>
+            <article key={angle.type} className="rounded-2xl bg-slate-50 p-3">
+              <p className="text-sm font-black text-indigo-700">{angle.type}</p>
+              <h4 className="mt-1 font-black text-slate-950">{angle.title}</h4>
               <p className="mt-2 leading-6 text-slate-700">{angle.explanation}</p>
-              <p className="mt-2 rounded-md bg-white p-3 text-sm leading-6 text-slate-700">{angle.example}</p>
+              <p className="mt-2 rounded-2xl bg-white p-3 text-sm leading-6 text-slate-700">{angle.example}</p>
             </article>
           ))}
         </div>
@@ -262,8 +291,8 @@ export function OutputSection({
       <Card id="canva" title="11. Prompt Canva" copiedKey={copiedKey} onCopy={onCopy} text={output.canvaPrompts.map(canvaToText).join("\n\n")}>
         <div className="grid gap-3">
           {output.canvaPrompts.map((prompt) => (
-            <article key={prompt.title} className="rounded-md bg-slate-50 p-3 leading-6 text-slate-700">
-              <h4 className="font-black text-ink">{prompt.title}</h4>
+            <article key={prompt.title} className="rounded-2xl bg-slate-50 p-3 leading-6 text-slate-700">
+              <h4 className="font-black text-slate-950">{prompt.title}</h4>
               <p><strong>Formato:</strong> {prompt.format}</p>
               <p><strong>Stile:</strong> {prompt.style}</p>
               <p><strong>Testo:</strong> {prompt.visualText}</p>
@@ -286,16 +315,16 @@ export function OutputSection({
       <Card id="creative" title="14. Idee creative per ads" copiedKey={copiedKey} onCopy={onCopy} text={output.creativeIdeas.map((idea) => `${idea.category}: ${idea.idea}`).join("\n")}>
         <div className="grid gap-3 sm:grid-cols-2">
           {output.creativeIdeas.map((idea) => (
-            <div key={`${idea.category}-${idea.idea}`} className="rounded-md bg-slate-50 p-3">
-              <p className="text-sm font-black text-blue-700">{idea.category}</p>
+            <div key={`${idea.category}-${idea.idea}`} className="rounded-2xl bg-slate-50 p-3">
+              <p className="text-sm font-black text-indigo-700">{idea.category}</p>
               <p className="mt-1 leading-6 text-slate-700">{idea.idea}</p>
             </div>
           ))}
         </div>
       </Card>
 
-      <Card id="ready" title="15. Campagna pronta da testare" copiedKey={copiedKey} onCopy={onCopy} text={Object.values(output.readyCampaign).join("\n")}>
-        <div className="space-y-3 rounded-md bg-slate-950 p-4 text-white">
+      <Card id="ready" title="15. Campagna pronta da testare" description="Il blocco migliore da copiare per il primo test." featured copiedKey={copiedKey} onCopy={onCopy} text={Object.values(output.readyCampaign).join("\n")}>
+        <div className="space-y-3 rounded-[20px] bg-slate-950 p-4 text-white">
           <Ready label="Primary text migliore" value={output.readyCampaign.primaryText} />
           <Ready label="Headline migliore" value={output.readyCampaign.headline} />
           <Ready label="Descrizione migliore" value={output.readyCampaign.description} />
@@ -305,7 +334,7 @@ export function OutputSection({
         </div>
       </Card>
 
-      <p className="rounded-lg border border-line bg-white p-4 text-sm leading-6 text-muted">
+      <p className="rounded-[22px] border border-slate-200 bg-white p-4 text-sm leading-6 text-slate-500">
         I testi generati sono una base strategica da testare. Le performance dipendono da offerta, creatività, pubblico, budget e landing page.
       </p>
     </div>
@@ -316,7 +345,7 @@ function List({ items }: { items: string[] }) {
   return (
     <ul className="space-y-2">
       {items.map((item) => (
-        <li key={item} className="rounded-md bg-slate-50 p-3 leading-6 text-slate-700">
+        <li key={item} className="rounded-2xl bg-slate-50 p-3 leading-6 text-slate-700">
           {item}
         </li>
       ))}
@@ -328,7 +357,7 @@ function TagList({ items }: { items: string[] }) {
   return (
     <div className="flex flex-wrap gap-2">
       {items.map((item) => (
-        <span key={item} className="rounded-md border border-blue-100 bg-blue-50 px-3 py-2 text-sm font-bold text-blue-800">
+        <span key={item} className="rounded-full border border-indigo-100 bg-indigo-50 px-3 py-2 text-sm font-bold text-indigo-800">
           {item}
         </span>
       ))}
@@ -338,8 +367,8 @@ function TagList({ items }: { items: string[] }) {
 
 function HookGroup({ title, items }: { title: string; items: string[] }) {
   return (
-    <div className="rounded-md bg-slate-50 p-3">
-      <h4 className="font-black text-ink">{title}</h4>
+    <div className="rounded-2xl bg-slate-50 p-3">
+      <h4 className="font-black text-slate-950">{title}</h4>
       <ul className="mt-2 space-y-2">
         {items.map((item) => (
           <li key={item} className="leading-6 text-slate-700">{item}</li>
@@ -366,8 +395,8 @@ function ScriptCards({
     <Card id={id} title={title} copiedKey={copiedKey} onCopy={onCopy} text={scriptsToText(scripts)}>
       <div className="grid gap-3">
         {scripts.map((script) => (
-          <article key={script.title} className="rounded-md bg-slate-50 p-3">
-            <h4 className="font-black text-ink">{script.title} <span className="text-sm text-muted">({script.duration})</span></h4>
+          <article key={script.title} className="rounded-2xl bg-slate-50 p-3">
+            <h4 className="font-black text-slate-950">{script.title} <span className="text-sm text-slate-500">({script.duration})</span></h4>
             <ul className="mt-2 space-y-2">
               {script.steps.map((step) => (
                 <li key={step} className="leading-6 text-slate-700">{step}</li>
@@ -382,7 +411,7 @@ function ScriptCards({
 
 function Ready({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-md bg-white/10 p-3">
+    <div className="rounded-2xl border border-white/10 bg-white/10 p-3">
       <p className="text-sm font-black text-blue-200">{label}</p>
       <p className="mt-1 leading-6">{value}</p>
     </div>

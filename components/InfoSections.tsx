@@ -1,13 +1,26 @@
-import { CheckCircle2, HelpCircle, MousePointerClick, UsersRound } from "lucide-react";
+import {
+  BadgeCheck,
+  Boxes,
+  CheckCircle2,
+  Clapperboard,
+  FileText,
+  HelpCircle,
+  Layers3,
+  MousePointerClick,
+  PenLine,
+  Sparkles,
+  UsersRound
+} from "lucide-react";
+import type { ReactNode } from "react";
 
 const obtainCards = [
-  "Testi Meta Ads pronti da adattare",
-  "Headline e descrizioni brevi",
-  "Hook per video ads",
-  "Script per video da 8, 15 e 30 secondi",
-  "Angoli di vendita da testare",
-  "Prompt per Canva, Heygen e InVideo",
-  "Idee creative per visual e video"
+  { title: "Testi Meta Ads da adattare", icon: FileText },
+  { title: "Headline e descrizioni brevi", icon: PenLine },
+  { title: "Hook per video ads", icon: Sparkles },
+  { title: "Script per video da 8, 15 e 30 secondi", icon: Clapperboard },
+  { title: "Angoli di vendita da testare", icon: Layers3 },
+  { title: "Prompt Canva, HeyGen e InVideo", icon: Boxes },
+  { title: "Idee creative per visual e video", icon: BadgeCheck }
 ];
 
 const audienceCards = [
@@ -40,92 +53,118 @@ const faqs = [
   {
     question: "Posso copiare i testi?",
     answer: "Sì, puoi copiare singole sezioni o tutto l’output."
+  },
+  {
+    question: "Il tool pubblica automaticamente le ads?",
+    answer: "No. Il tool genera testi, script e idee creative da copiare e adattare nelle tue campagne."
   }
+];
+
+const steps = [
+  ["1", "Inserisci prodotto, pubblico e offerta"],
+  ["2", "Scegli piattaforma, tono e obiettivo"],
+  ["3", "Copia testi, script e prompt da testare"]
 ];
 
 export function InfoSections() {
   return (
-    <div className="space-y-16">
+    <div className="space-y-14 sm:space-y-16">
       <section id="cosa-ottieni">
-        <div className="mb-6 flex items-center gap-3">
-          <CheckCircle2 className="h-6 w-6 text-blue-600" />
-          <h2 className="text-2xl font-black text-ink sm:text-3xl">Cosa ottieni</h2>
-        </div>
+        <SectionHeading
+          icon={<CheckCircle2 className="h-6 w-6 text-indigo-600" />}
+          title="Cosa ottieni"
+          subtitle="Output pratici, copiabili e pensati per test reali, non per riempire una pagina."
+        />
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {obtainCards.map((item) => (
-            <div key={item} className="rounded-lg border border-line bg-white p-5 shadow-sm">
-              <p className="font-bold text-ink">{item}</p>
+          {obtainCards.map(({ title, icon: Icon }) => (
+            <div key={title} className="rounded-[22px] border border-slate-200 bg-white p-5 shadow-sm">
+              <div className="mb-4 flex h-11 w-11 items-center justify-center rounded-2xl bg-indigo-50 text-indigo-600">
+                <Icon className="h-5 w-5" />
+              </div>
+              <p className="font-black leading-6 text-slate-950">{title}</p>
             </div>
           ))}
         </div>
       </section>
 
       <section>
-        <div className="mb-6 flex items-center gap-3">
-          <MousePointerClick className="h-6 w-6 text-violet-600" />
-          <h2 className="text-2xl font-black text-ink sm:text-3xl">Come funziona</h2>
-        </div>
+        <SectionHeading
+          icon={<MousePointerClick className="h-6 w-6 text-violet-600" />}
+          title="Come funziona"
+          subtitle="Tre passaggi semplici per passare dal briefing alla prima campagna da testare."
+        />
         <div className="grid gap-4 md:grid-cols-3">
-          {[
-            ["1", "Inserisci offerta, pubblico, problema e beneficio."],
-            ["2", "Scegli tono, piattaforma, obiettivo e tipo di output."],
-            ["3", "Genera testi, script, CTA e prompt pronti da adattare."]
-          ].map(([number, text]) => (
-            <div key={number} className="rounded-lg border border-line bg-white p-5 shadow-sm">
-              <span className="mb-4 flex h-9 w-9 items-center justify-center rounded-md bg-ink font-black text-white">
+          {steps.map(([number, text]) => (
+            <div key={number} className="rounded-[22px] border border-slate-200 bg-white p-5 shadow-sm">
+              <span className="mb-4 flex h-10 w-10 items-center justify-center rounded-2xl bg-slate-950 font-black text-white">
                 {number}
               </span>
-              <p className="font-semibold leading-6 text-slate-700">{text}</p>
+              <p className="font-black leading-6 text-slate-900">{text}</p>
             </div>
           ))}
         </div>
       </section>
 
       <section>
-        <div className="mb-6 flex items-center gap-3">
-          <UsersRound className="h-6 w-6 text-blue-600" />
-          <h2 className="text-2xl font-black text-ink sm:text-3xl">Per chi è</h2>
-        </div>
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <SectionHeading
+          icon={<UsersRound className="h-6 w-6 text-indigo-600" />}
+          title="Per chi è"
+          subtitle="Per chi vuole creare una prima base di copy senza partire ogni volta da zero."
+        />
+        <div className="flex flex-wrap gap-2">
           {audienceCards.map((item) => (
-            <div key={item} className="rounded-lg border border-line bg-white p-5 shadow-sm">
-              <p className="font-bold text-ink">{item}</p>
-            </div>
+            <span key={item} className="rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-black text-slate-700 shadow-sm">
+              {item}
+            </span>
           ))}
         </div>
       </section>
 
       <section>
-        <div className="mb-6 flex items-center gap-3">
-          <HelpCircle className="h-6 w-6 text-violet-600" />
-          <h2 className="text-2xl font-black text-ink sm:text-3xl">FAQ</h2>
-        </div>
+        <SectionHeading
+          icon={<HelpCircle className="h-6 w-6 text-violet-600" />}
+          title="FAQ"
+          subtitle="Le risposte rapide prima di usare il tool per la prossima campagna."
+        />
         <div className="grid gap-4 md:grid-cols-2">
           {faqs.map((faq) => (
-            <div key={faq.question} className="rounded-lg border border-line bg-white p-5 shadow-sm">
-              <h3 className="font-black text-ink">{faq.question}</h3>
-              <p className="mt-2 leading-6 text-muted">{faq.answer}</p>
+            <div key={faq.question} className="rounded-[22px] border border-slate-200 bg-white p-5 shadow-sm">
+              <h3 className="font-black text-slate-950">{faq.question}</h3>
+              <p className="mt-2 leading-6 text-slate-600">{faq.answer}</p>
             </div>
           ))}
         </div>
       </section>
 
-      <section className="rounded-lg bg-ink p-6 text-white shadow-soft sm:p-8">
+      <section className="rounded-[28px] bg-slate-950 p-6 text-white shadow-[0_24px_70px_rgba(15,23,42,0.20)] sm:p-8">
         <div className="grid gap-6 md:grid-cols-[1fr_auto] md:items-center">
           <div>
-            <h2 className="text-2xl font-black sm:text-3xl">Pronto a trasformare l’idea in copy testabile?</h2>
-            <p className="mt-3 max-w-2xl text-slate-300">
-              Compila il form e crea una base strategica per Meta, TikTok, Instagram e campagne sponsorizzate.
+            <p className="text-sm font-black uppercase text-indigo-200">Primo test più ordinato</p>
+            <h2 className="mt-2 text-2xl font-black sm:text-3xl">Trasforma l’idea in copy, script e prompt pronti da adattare.</h2>
+            <p className="mt-3 max-w-2xl leading-7 text-slate-300">
+              Compila il form, scegli l’output essenziale e copia la campagna pronta da testare.
             </p>
           </div>
           <a
             href="#generator"
-            className="inline-flex min-h-12 items-center justify-center rounded-md bg-white px-5 py-3 font-black text-ink transition hover:bg-blue-50"
+            className="inline-flex min-h-12 items-center justify-center rounded-2xl bg-white px-6 py-3 font-black text-slate-950 transition hover:bg-indigo-50"
           >
             Genera Ads
           </a>
         </div>
       </section>
+    </div>
+  );
+}
+
+function SectionHeading({ icon, title, subtitle }: { icon: ReactNode; title: string; subtitle: string }) {
+  return (
+    <div className="mb-6 flex items-start gap-3">
+      <div className="mt-1 flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-white shadow-sm">{icon}</div>
+      <div>
+        <h2 className="text-2xl font-black text-slate-950 sm:text-3xl">{title}</h2>
+        <p className="mt-2 max-w-2xl leading-6 text-slate-600">{subtitle}</p>
+      </div>
     </div>
   );
 }
