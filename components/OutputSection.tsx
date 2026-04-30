@@ -24,7 +24,7 @@ export function outputToText(output: GeneratedAdsOutput): string {
     `Problema percepito: ${output.quickAnalysis.perceivedProblem}`,
     `Desiderio nascosto: ${output.quickAnalysis.hiddenDesire}`,
     `Promessa pubblicitaria: ${output.quickAnalysis.adPromise}`,
-    `Leva emotiva principale: ${output.quickAnalysis.emotionalLever}`,
+    `Motivo emotivo: ${output.quickAnalysis.emotionalLever}`,
     `Possibile obiezione: ${output.quickAnalysis.possibleObjection}`,
     `Risposta all'obiezione: ${output.quickAnalysis.objectionAnswer}`,
     "",
@@ -199,7 +199,7 @@ export function OutputSection({
             ["Problema percepito", output.quickAnalysis.perceivedProblem],
             ["Desiderio nascosto", output.quickAnalysis.hiddenDesire],
             ["Promessa pubblicitaria", output.quickAnalysis.adPromise],
-            ["Leva emotiva principale", output.quickAnalysis.emotionalLever],
+            ["Motivo emotivo", output.quickAnalysis.emotionalLever],
             ["Possibile obiezione", output.quickAnalysis.possibleObjection],
             ["Risposta all’obiezione", output.quickAnalysis.objectionAnswer]
           ].map(([label, value]) => (
