@@ -18,10 +18,10 @@ html {
 body {
   margin: 0;
   background:
-    radial-gradient(circle at top left, rgba(37, 99, 235, 0.12), transparent 34rem),
-    radial-gradient(circle at top right, rgba(124, 58, 237, 0.12), transparent 30rem),
+    radial-gradient(circle at top left, rgba(79, 70, 229, 0.10), transparent 34rem),
+    radial-gradient(circle at top right, rgba(124, 58, 237, 0.08), transparent 30rem),
     #f8fafc;
-  color: #111827;
+  color: #0f172a;
   font-family:
     Inter,
     ui-sans-serif,
@@ -39,8 +39,18 @@ textarea {
   font: inherit;
 }
 
+button {
+  -webkit-tap-highlight-color: transparent;
+}
+
+input,
+select,
+textarea {
+  font-size: 16px;
+}
+
 ::selection {
-  background: rgba(37, 99, 235, 0.18);
+  background: rgba(79, 70, 229, 0.18);
 }
 
 @media print {

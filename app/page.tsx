@@ -78,7 +78,7 @@ export default function Home() {
     <main>
       <Hero onGenerateClick={scrollToGenerator} onPreviewClick={scrollToOutput} />
 
-      <div className="mx-auto grid max-w-6xl gap-8 px-4 py-10 sm:px-6 lg:grid-cols-[0.9fr_1.1fr] lg:px-8">
+      <div className="mx-auto grid max-w-6xl gap-8 px-4 py-8 sm:px-6 sm:py-10 lg:grid-cols-[0.92fr_1.08fr] lg:px-8">
         <div className="lg:sticky lg:top-5 lg:self-start">
           <AdsForm
             value={form}
@@ -92,10 +92,10 @@ export default function Home() {
 
         <div ref={outputRef}>
           {isLoading ? (
-            <div className="rounded-lg border border-line bg-white p-8 text-center shadow-soft">
+            <div className="rounded-[24px] border border-slate-200 bg-white p-8 text-center shadow-[0_18px_55px_rgba(15,23,42,0.08)]">
               <div className="mx-auto h-12 w-12 animate-spin rounded-full border-4 border-blue-100 border-t-blue-600" />
-              <p className="mt-5 text-lg font-black text-ink">Sto creando angoli, hook e script da testare…</p>
-              <p className="mt-2 text-muted">Sto variando tono, CTA e strutture per evitare testi ripetitivi.</p>
+              <p className="mt-5 text-lg font-black text-slate-950">Sto creando angoli, hook e script da testare…</p>
+              <p className="mt-2 text-slate-600">Sto variando tono, CTA e strutture per evitare testi ripetitivi.</p>
             </div>
           ) : (
             <OutputSection
