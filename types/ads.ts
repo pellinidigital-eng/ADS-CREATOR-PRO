@@ -99,6 +99,16 @@ export type ReadyCampaign = {
   finalCta: string;
 };
 
+export type ComplianceNote = {
+  topic: string;
+  note: string;
+};
+
+export type ABTestSuggestion = {
+  test: string;
+  why: string;
+};
+
 export type GeneratedAdsOutput = {
   quickAnalysis: QuickAnalysis;
   salesAngles: SalesAngle[];
@@ -126,5 +136,12 @@ export type GeneratedAdsOutput = {
   invideoPrompts: string[];
   creativeIdeas: CreativeIdea[];
   readyCampaign: ReadyCampaign;
+  complianceNotes: ComplianceNote[];
+  abTestSuggestions: ABTestSuggestion[];
+  inputQualityScore: {
+    score: number;
+    label: string;
+    suggestions: string[];
+  };
   generatedAt: string;
 };
