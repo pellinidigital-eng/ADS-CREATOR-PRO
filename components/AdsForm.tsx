@@ -1,6 +1,6 @@
 "use client";
 
-import { CheckSquare, Eraser, Layers3, Megaphone, MousePointerClick, UserRound, Wand2 } from "lucide-react";
+import { CheckSquare, Eraser, Layers3, Megaphone, MousePointer2, UserRound, Wand2 } from "lucide-react";
 import type { ReactNode } from "react";
 import type { AdsFormInput, Aggressiveness, CampaignGoal, OutputType, Platform, Tone } from "@/types/ads";
 
@@ -140,7 +140,7 @@ export function AdsForm({ value, isLoading, validationMessage, onChange, onSubmi
           />
         </FormBlock>
 
-        <FormBlock icon={<MousePointerClick className="h-5 w-5" />} title="3. Campagna" note="Scegli il contesto: il copy cambierà tono, CTA e formato.">
+        <FormBlock icon={<MousePointer2 className="h-5 w-5" />} title="3. Campagna" note="Scegli il contesto: il copy cambierà tono, CTA e formato.">
           <div className="grid gap-3 md:grid-cols-2">
             <Select label="Tono comunicativo" value={value.tone} options={toneOptions} onChange={(text) => update("tone", text as Tone)} />
             <Select label="Piattaforma principale" value={value.platform} options={platformOptions} onChange={(text) => update("platform", text as Platform)} />
