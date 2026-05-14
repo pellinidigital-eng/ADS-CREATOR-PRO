@@ -1,5 +1,7 @@
 import type {
+  ABTestSuggestion,
   AdsFormInput,
+  ComplianceNote,
   CreativeIdea,
   GeneratedAdsOutput,
   PromptCanva,
@@ -7,15 +9,33 @@ import type {
   VideoScript
 } from "@/types/ads";
 
+type ProductCategory =
+  | "digital"
+  | "service"
+  | "ecommerce"
+  | "local"
+  | "finance"
+  | "wellness"
+  | "beauty"
+  | "saas"
+  | "food"
+  | "creative"
+  | "general";
+
+type AwarenessLevel = "unaware" | "problem" | "solution" | "product" | "retargeting";
+type CreativeType = "screen-recording" | "founder-demo" | "faceless" | "ugc" | "before-after" | "checklist" | "testimonial";
+
 type NormalizedInput = {
   productName: string;
   productType: string;
+  productReference: string;
   normalizedProblem: string;
   normalizedDesire: string;
   normalizedBenefit: string;
   normalizedOffer: string;
   normalizedAudience: string;
-  productCategory: "digital" | "service" | "ecommerce" | "local" | "general";
+  audienceShort: string;
+  productCategory: ProductCategory;
   emotionalAngle: string;
   practicalAngle: string;
   platformLabel: string;
@@ -23,14 +43,295 @@ type NormalizedInput = {
   toneLabel: string;
   ctaTheme: string;
   visualSubject: string;
+  isVague: boolean;
+  vagueSignals: string[];
 };
 
-const pick = <T,>(items: T[], seed: number, offset = 0): T =>
-  items[Math.abs(seed + offset) % items.length];
+type GenerationPlan = {
+  seed: number;
+  angle: string;
+  awareness: AwarenessLevel;
+  creativeType: CreativeType;
+  structure: string;
+  promiseFrame: string;
+  visualFrame: string;
+};
 
-const rotate = <T,>(items: T[], seed: number): T[] => {
-  const start = Math.abs(seed) % items.length;
-  return [...items.slice(start), ...items.slice(0, start)];
+const sessionMemory = {
+  headlines: [] as string[],
+  ctas: [] as string[],
+  hooks: [] as string[],
+  angles: [] as string[],
+  scripts: [] as string[],
+  structures: [] as string[]
+};
+
+const MEMORY_LIMIT = 260;
+
+const bannedReplacements: Array<[RegExp, string]> = [
+  [/frizione intelligente/gi, "domanda utile"],
+  [/sbloccare l['’]attenzione/gi, "far capire subito il valore"],
+  [/leva emotiva principale/gi, "motivo che spinge all'azione"],
+  [/soluzione perfetta/gi, "percorso pratico"],
+  [/porta (il tuo )?business al livello successivo/gi, "rendi più chiaro ciò che vendi"],
+  [/occasione (da non perdere|imperdibile)/gi, "momento utile per iniziare"],
+  [/risultati garantiti/gi, "risultati da verificare con test reali"],
+  [/guadagna subito/gi, "inizia con aspettative realistiche"],
+  [/soldi facili/gi, "entrate costruite con metodo"],
+  [/copy pronto in modo magico/gi, "copy strutturato da adattare"],
+  [/campagna perfetta/gi, "prima versione da testare"],
+  [/ads profittevoli garantite/gi, "ads da testare con dati reali"],
+  [/ROAS garantito/gi, "performance da misurare"],
+  [/vendite sicure/gi, "vendite da costruire con test e ottimizzazione"],
+  [/successo automatico/gi, "processo più ordinato"],
+  [/annuncio infallibile/gi, "annuncio più chiaro da validare"],
+  [/conversioni assicurate/gi, "conversioni da misurare"],
+  [/dimagrisci in \d+ giorni/gi, "migliora le tue abitudini con un percorso graduale"],
+  [/diventa ricco/gi, "costruisci un percorso economico più consapevole"],
+  [/esplodere le vendite/gi, "rendere il messaggio più chiaro da testare"],
+  [/stai sbagliando tutto/gi, "potresti partire da un messaggio più ordinato"]
+];
+
+const riskyPatterns: Array<[RegExp, string]> = [
+  [/sei stanco di essere ([^?.,]+)/gi, "Per chi vuole affrontare questo tema con un approccio più organizzato"],
+  [/sei (grasso|sovrappeso|povero|disperato|fallito)/gi, "Vuoi migliorare la situazione con un percorso più ordinato"],
+  [/non riesci a vendere/gi, "fatichi a comunicare il valore dell'offerta"],
+  [/guadagna\s?[\d.]+€?[^.,]*/gi, "costruisci un percorso economico con aspettative realistiche"],
+  [/metodo garantito/gi, "metodo pratico da testare"],
+  [/risultato garantito/gi, "risultato da validare con test reali"],
+  [/prima\/dopo incredibile/gi, "confronto tra situazione iniziale e percorso proposto"],
+  [/trasformazione sicura/gi, "miglioramento progressivo"],
+  [/cura definitiva/gi, "supporto da valutare con professionisti qualificati"]
+];
+
+const categoryKeywords: Record<ProductCategory, string[]> = {
+  digital: ["digitale", "corso", "online", "infoprodotto", "creator", "template", "shopify", "contenuti", "caption", "hook"],
+  service: ["consulenza", "servizio", "freelance", "coach", "agenzia", "fotografo"],
+  ecommerce: ["ecommerce", "shop", "abbigliamento", "prodotto fisico", "beauty", "bundle"],
+  local: ["locale", "centro", "studio", "ristorante", "estetica", "palestra"],
+  finance: ["finanziario", "invest", "trading", "risparmio", "credito", "mutuo"],
+  wellness: ["personal trainer", "nutrizionista", "fitness", "salute", "dimagr", "routine"],
+  beauty: ["beauty", "skincare", "estetico", "estetista", "makeup", "trattamento"],
+  saas: ["software", "saas", "tool", "app", "dashboard", "crm"],
+  food: ["ristorante", "bar", "pizzeria", "food", "menu", "prenotazione"],
+  creative: ["fotografo", "design", "grafica", "canva", "visual", "portfolio"],
+  general: []
+};
+
+const strategicAngles = [
+  "foglio bianco",
+  "prima direzione chiara",
+  "meno tentativi casuali",
+  "messaggio più specifico",
+  "prima versione da testare",
+  "obiezione principale",
+  "prima/dopo moderato",
+  "checklist prima del lancio",
+  "demo del risultato",
+  "errore comune",
+  "tempo risparmiato",
+  "percorso step by step",
+  "angolo educativo",
+  "prova pratica",
+  "retargeting soft",
+  "offerta più leggibile",
+  "nodo del pubblico",
+  "confronto tra opzioni",
+  "contenuto salvabile",
+  "mini scenario quotidiano",
+  " founder story",
+  "screen recording",
+  "low ticket semplice",
+  "da confusione a piano"
+];
+
+const awarenessLevels: AwarenessLevel[] = ["unaware", "problem", "solution", "product", "retargeting"];
+const creativeTypes: CreativeType[] = ["screen-recording", "founder-demo", "faceless", "ugc", "before-after", "checklist", "testimonial"];
+
+const openingPatterns = [
+  "Prima di {action}, chiarisci {asset}.",
+  "Il punto non è {surface}. È {realIssue}.",
+  "Quando {audience} si blocca, spesso manca {asset}.",
+  "{scenario}: ecco dove nasce un annuncio più credibile.",
+  "Non serve partire da zero: serve {asset} abbastanza chiaro da testare.",
+  "Se {realIssue}, l'annuncio deve semplificare il prossimo passo.",
+  "Una buona creatività parte da {asset}, non da una frase decorativa.",
+  "Il cliente non deve indovinare: deve capire {benefit}.",
+  "Prima del budget viene una domanda: {question}.",
+  "Meno parole generiche, più contesto: {scenario}."
+];
+
+const headlinePatterns = [
+  "Da idea a test chiaro",
+  "Prima versione pronta",
+  "Meno dubbi, più direzione",
+  "Il messaggio prima del budget",
+  "Parti con più chiarezza",
+  "Una base da adattare",
+  "Hook e script più ordinati",
+  "Trasforma l'idea in ads",
+  "Dai forma alla promessa",
+  "Copia, adatta, testa",
+  "Prima chiarisci l'offerta",
+  "Più angoli da provare",
+  "Non partire dal vuoto",
+  "Creatività più semplice",
+  "Il primo test parte qui",
+  "Rendi l'offerta leggibile",
+  "Meno template, più contesto",
+  "Bozza strategica pronta",
+  "Dalla confusione al copy",
+  "Una campagna più ordinata"
+];
+
+const digitalHeadlines = [
+  "Parti dal tuo primo prodotto",
+  "Da idea a prodotto digitale",
+  "Crea il tuo primo digitale",
+  "Non sai da dove iniziare?",
+  "Inizia senza confusione",
+  "Guida pratica per partire",
+  "Il primo passo è qui",
+  "Meno tutorial, più direzione",
+  "Da confusione a offerta chiara",
+  "Idea, nicchia, primi contenuti",
+  "Costruisci qualcosa di tuo",
+  "Primo prodotto, più ordine",
+  "Dai forma alla tua idea",
+  "Parti senza mille tutorial",
+  "Una guida per iniziare"
+];
+
+const ctaBank = [
+  "Prepara il primo test",
+  "Crea una bozza da adattare",
+  "Parti da un messaggio più chiaro",
+  "Genera varianti da confrontare",
+  "Costruisci la tua prima versione",
+  "Metti ordine nella campagna",
+  "Copia una base e adattala",
+  "Scegli l'angolo da provare",
+  "Prepara hook e CTA",
+  "Crea materiali per il lancio",
+  "Parti dal prossimo test",
+  "Rendi l'offerta più leggibile",
+  "Trasforma l'idea in copy",
+  "Prepara script e visual",
+  "Crea una campagna ordinata",
+  "Lavora su una nuova variante",
+  "Apri una bozza più chiara",
+  "Genera la prima direzione",
+  "Adatta il copy alla tua offerta",
+  "Porta il messaggio in test"
+];
+
+const digitalCtas = [
+  "Inizia dal tuo primo prodotto",
+  "Accedi alla guida pratica",
+  "Crea la tua prima idea digitale",
+  "Parti con il percorso step by step",
+  "Prepara il tuo primo prodotto",
+  "Metti ordine tra idea e offerta",
+  "Costruisci la prima direzione",
+  "Trasforma gli appunti in piano",
+  "Parti senza confusione",
+  "Dai forma alla prima offerta"
+];
+
+const descriptionBank = [
+  "Bozza da adattare",
+  "Primo test più chiaro",
+  "Hook, copy e CTA",
+  "Varianti da provare",
+  "Prompt e script inclusi",
+  "Base strategica",
+  "Output copiabili",
+  "Messaggio più ordinato",
+  "Creatività da testare",
+  "Piano più leggibile"
+];
+
+const headlineNouns = [
+  "idea", "offerta", "messaggio", "hook", "script", "campagna", "brief", "visual", "proposta", "promessa",
+  "prima bozza", "direzione", "CTA", "contenuto", "test", "lancio", "angolo", "copy", "scenario", "percorso"
+];
+
+const headlineVerbs = [
+  "chiarisci", "prepara", "ordina", "trasforma", "rendi leggibile", "metti in test", "semplifica", "struttura",
+  "adatta", "confronta", "riscrivi", "porta in bozza", "dai forma a", "scegli", "costruisci"
+];
+
+const headlineFrames = [
+  "{verb} la tua {noun}",
+  "{noun} più chiara",
+  "prima {noun} da testare",
+  "meno confusione sulla {noun}",
+  "da {noun} vaga a bozza",
+  "{noun}: il primo passo",
+  "una {noun} più ordinata",
+  "{verb} prima del budget"
+];
+
+const ctaVerbs = [
+  "prepara", "crea", "adatta", "copia", "genera", "ordina", "scegli", "confronta", "struttura", "porta in test",
+  "riscrivi", "metti a fuoco", "trasforma", "semplifica", "costruisci"
+];
+
+const ctaObjects = [
+  "la prima bozza", "un nuovo hook", "la CTA", "lo script", "il prompt visual", "la campagna", "il messaggio",
+  "l'angolo", "la promessa", "il brief", "il primo test", "la variante", "il copy", "la creatività"
+];
+
+const hookFrames = [
+  "Prima di {action}, guarda {asset}.",
+  "Il blocco non è {surface}: è {realIssue}.",
+  "Hai {scenario}? Parti da {asset}.",
+  "Se {problem}, prova a cambiare {asset}.",
+  "Una ads debole spesso nasce da {realIssue}.",
+  "Non serve più rumore: serve {asset}.",
+  "La prima domanda non è creativa. È: {question}",
+  "Quando il brief è vago, parti da {asset}.",
+  "Questo è il punto che molti saltano prima del lancio.",
+  "Prima il messaggio. Poi il visual."
+];
+
+const complianceDefaults: ComplianceNote[] = [
+  {
+    topic: "Policy platform",
+    note: "Controlla sempre che il copy sia coerente con le policy della piattaforma prima di pubblicare."
+  },
+  {
+    topic: "Promesse",
+    note: "Evita claim assoluti: presenta l'output come base da testare, non come promessa certa di performance."
+  },
+  {
+    topic: "Attributi personali",
+    note: "Non accusare direttamente l'utente o fare leva su caratteristiche personali sensibili."
+  }
+];
+
+const abTestDefaults: ABTestSuggestion[] = [
+  {
+    test: "Hook problema vs hook desiderio",
+    why: "Aiuta a capire se il pubblico reagisce meglio al blocco attuale o al risultato desiderato."
+  },
+  {
+    test: "Visual screen recording vs visual faceless",
+    why: "Confronta un contenuto dimostrativo con una creatività più semplice e veloce da produrre."
+  },
+  {
+    test: "CTA soft vs CTA diretta",
+    why: "Misura se l'utente ha bisogno di più rassicurazione o è già pronto al prossimo passo."
+  }
+];
+
+const compact = (value?: string | null): string => (value ?? "").trim().replace(/\s+/g, " ").replace(/\.$/, "");
+const lowerFirst = (value: string): string => value ? value.charAt(0).toLowerCase() + value.slice(1) : value;
+const sentenceCase = (value: string): string => value ? value.charAt(0).toUpperCase() + value.slice(1) : value;
+
+const hasAny = (value: string, words: string[]) => {
+  const lower = value.toLowerCase();
+  return words.some((word) => lower.includes(word));
 };
 
 const hashInput = (input: AdsFormInput): number => {
@@ -38,98 +339,228 @@ const hashInput = (input: AdsFormInput): number => {
   return raw.split("").reduce((acc, char) => acc + char.charCodeAt(0), 0);
 };
 
-const compact = (value: string): string => value.trim().replace(/\s+/g, " ").replace(/\.$/, "");
+const pick = <T,>(items: T[], seed: number, offset = 0): T => items[Math.abs(seed + offset) % items.length];
 
-const sentenceCase = (value: string): string => value.charAt(0).toUpperCase() + value.slice(1);
+function remember(bucket: keyof typeof sessionMemory, values: string[]) {
+  sessionMemory[bucket].push(...values.map((value) => simplify(value)));
+  if (sessionMemory[bucket].length > MEMORY_LIMIT) {
+    sessionMemory[bucket] = sessionMemory[bucket].slice(-MEMORY_LIMIT);
+  }
+}
 
-const lowerFirst = (value: string): string => value.charAt(0).toLowerCase() + value.slice(1);
-
-const limit = (text: string, max: number): string => {
-  const cleaned = cleanCopy(text);
-  return cleaned.length <= max ? cleaned : `${cleaned.slice(0, max - 1).trim()}…`;
-};
-
-const hasAny = (value: string, words: string[]) => {
-  const lower = value.toLowerCase();
-  return words.some((word) => lower.includes(word));
-};
-
-const bannedReplacements: Array<[RegExp, string]> = [
-  [/frizione intelligente/gi, "domanda scomoda ma utile"],
-  [/sbloccare l'attenzione/gi, "far capire subito il valore"],
-  [/sbloccare l’attenzione/gi, "far capire subito il valore"],
-  [/leva emotiva principale/gi, "motivo che spinge all'azione"],
-  [/soluzione perfetta/gi, "percorso pratico"],
-  [/business al livello successivo/gi, "lavoro più chiaro e ordinato"],
-  [/occasione da non perdere/gi, "momento giusto per iniziare"],
-  [/risultati garantiti/gi, "risultati da costruire con test reali"],
-  [/guadagna subito/gi, "inizia con aspettative realistiche"],
-  [/soldi facili/gi, "entrate costruite con metodo"],
-  [/base concreta per (Meta Ads|TikTok Ads|Instagram Reels|Facebook Feed|Meta, TikTok e Instagram)/gi, "messaggio pronto da adattare"],
-  [/con una spinta più decisa, ma credibile/gi, "con tono deciso e realistico"],
-  [/porta il tuo brand al livello successivo/gi, "rendi più chiaro ciò che vendi"],
-  [/migliora il tuo business/gi, "rendi più semplice il prossimo passo"]
-];
-
-export function cleanCopy(text: string): string {
-  return bannedReplacements
-    .reduce((value, [pattern, replacement]) => value.replace(pattern, replacement), text)
+function simplify(value: string): string {
+  return value
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9\s]/g, "")
     .replace(/\s+/g, " ")
-    .replace(/\s([,.!?;:])/g, "$1")
     .trim();
 }
 
-function categoryFrom(input: AdsFormInput): NormalizedInput["productCategory"] {
-  const raw = `${input.productType} ${input.productName} ${input.targetAudience} ${input.mainProblem} ${input.audienceDesire}`.toLowerCase();
-
-  if (hasAny(raw, ["digitale", "online", "corso", "infoprodotto", "creator", "vendere online", "prodotto digitale", "tutorial"])) {
-    return "digital";
-  }
-
-  if (hasAny(raw, ["consulenza", "servizio", "freelance", "coach", "agenzia"])) return "service";
-  if (hasAny(raw, ["ecommerce", "shop", "negozio online", "prodotto fisico"])) return "ecommerce";
-  if (hasAny(raw, ["locale", "ristorante", "studio", "centro", "estetista", "palestra"])) return "local";
-  return "general";
+function similarity(a: string, b: string): number {
+  const aWords = new Set(simplify(a).split(" ").filter(Boolean));
+  const bWords = new Set(simplify(b).split(" ").filter(Boolean));
+  if (!aWords.size || !bWords.size) return 0;
+  const overlap = [...aWords].filter((word) => bWords.has(word)).length;
+  return overlap / Math.max(aWords.size, bWords.size);
 }
 
-function interpretProblem(rawProblem: string, category: NormalizedInput["productCategory"], audience: string): string {
+function uniqueBySimilarity(items: string[], memory: string[], minDistance = 0.62): string[] {
+  const selected: string[] = [];
+
+  for (const item of items.map(cleanCopy)) {
+    const isDuplicate = selected.some((prev) => similarity(prev, item) > minDistance);
+    const inMemory = memory.some((prev) => similarity(prev, item) > minDistance);
+    if (!isDuplicate && !inMemory) selected.push(item);
+  }
+
+  for (const item of items.map(cleanCopy)) {
+    if (!selected.some((prev) => similarity(prev, item) > minDistance)) selected.push(item);
+  }
+  return selected.filter((item) => !memory.some((prev) => similarity(prev, item) > minDistance));
+}
+
+function rotate<T>(items: T[], seed: number): T[] {
+  const start = Math.abs(seed) % items.length;
+  return [...items.slice(start), ...items.slice(0, start)];
+}
+
+function fillFromPatterns(patterns: string[], c: NormalizedInput, plan: GenerationPlan): string[] {
+  return patterns.map((pattern, index) =>
+    cleanCopy(
+      pattern
+        .replaceAll("{product}", c.productReference)
+        .replaceAll("{productName}", c.productName)
+        .replaceAll("{audience}", c.audienceShort)
+        .replaceAll("{problem}", c.normalizedProblem)
+        .replaceAll("{desire}", c.normalizedDesire)
+        .replaceAll("{benefit}", c.normalizedBenefit)
+        .replaceAll("{offer}", c.normalizedOffer)
+        .replaceAll("{asset}", pick(["una promessa chiara", "un angolo da testare", "una prima bozza", "una CTA coerente"], plan.seed, index))
+        .replaceAll("{surface}", pick(["la grafica", "il budget", "la piattaforma", "l'idea"], plan.seed, index + 3))
+        .replaceAll("{realIssue}", pick(["il messaggio che resta troppo vago", "la promessa poco concreta", "il primo passo non abbastanza chiaro"], plan.seed, index + 5))
+        .replaceAll("{scenario}", pick(["pagina bianca", "bozze sparse", "annuncio pronto ma poco chiaro", "lancio vicino"], plan.seed, index + 8))
+        .replaceAll("{action}", pick(["mettere budget", "aprire Canva", "registrare un video", "scrivere una nuova headline"], plan.seed, index + 11))
+        .replaceAll("{question}", pick(["cosa deve capire il cliente?", "qual è il primo passo?", "quale promessa è più credibile?"], plan.seed, index + 14))
+    )
+  );
+}
+
+function expandHeadlines(c: NormalizedInput, plan: GenerationPlan): string[] {
+  const generated: string[] = [];
+
+  headlineFrames.forEach((frame, frameIndex) => {
+    headlineNouns.forEach((noun, nounIndex) => {
+      const verb = pick(headlineVerbs, plan.seed, frameIndex + nounIndex);
+      generated.push(
+        frame
+          .replaceAll("{verb}", verb)
+          .replaceAll("{noun}", noun)
+      );
+    });
+  });
+
+  if (isDigital(c)) {
+    generated.push(
+      "idea, nicchia, offerta",
+      "dai forma al digitale",
+      "primo prodotto in bozza",
+      "meno tutorial, più piano",
+      "contenuti prima del lancio"
+    );
+  }
+
+  if (c.productCategory === "local") generated.push("prenota con più chiarezza", "messaggio locale più forte", "fatti scegliere meglio");
+  if (c.productCategory === "finance") generated.push("scelte più ordinate", "prima capisci, poi decidi", "messaggio più prudente");
+  if (c.productCategory === "wellness") generated.push("routine più sostenibile", "piccoli passi più chiari", "percorso senza estremi");
+
+  return generated.map(sentenceCase);
+}
+
+function expandCtas(c: NormalizedInput, plan: GenerationPlan): string[] {
+  const generated: string[] = [];
+  ctaVerbs.forEach((verb, verbIndex) => {
+    ctaObjects.forEach((object, objectIndex) => {
+      generated.push(`${sentenceCase(verb)} ${object}`);
+      if ((verbIndex + objectIndex + plan.seed) % 3 === 0) generated.push(`${sentenceCase(verb)} ${object} da testare`);
+      if ((verbIndex + objectIndex + plan.seed) % 5 === 0) generated.push(`${sentenceCase(verb)} ${object} per il prossimo lancio`);
+    });
+  });
+
+  if (isDigital(c)) generated.push(...digitalCtas, "Dai forma alla prima offerta", "Crea il primo piano digitale", "Metti ordine tra idea e nicchia");
+  return generated;
+}
+
+function expandHooks(c: NormalizedInput, plan: GenerationPlan): string[] {
+  return fillFromPatterns(hookFrames, c, plan).concat(
+    headlineNouns.map((noun, index) => cleanCopy(`Prima di cambiare ${noun}, chiarisci il messaggio.`)),
+    ctaObjects.map((object) => cleanCopy(`Non partire da ${object}: parti dal problema reale.`)),
+    isDigital(c)
+      ? ["Hai idee salvate ovunque, ma nessuna offerta pronta?", "Il primo prodotto digitale nasce da una scelta, non da altri tutorial."]
+      : ["Il cliente non deve decifrare la tua offerta.", "Un test utile parte da una promessa leggibile."]
+  );
+}
+
+export function cleanCopy(text: string): string {
+  return [...bannedReplacements, ...riskyPatterns]
+    .reduce((value, [pattern, replacement]) => value.replace(pattern, replacement), text)
+    .replace(/\b(compra|acquista ora|scopri di più|provalo ora)\b/gi, (match) => {
+      const map: Record<string, string> = {
+        compra: "valuta",
+        "acquista ora": "accedi al percorso",
+        "scopri di più": "guarda il prossimo passo",
+        "provalo ora": "crea una prima versione"
+      };
+      return map[match.toLowerCase()] || match;
+    })
+    .replace(/\s+/g, " ")
+    .replace(/\s([,.!?;:])/g, "$1")
+    .replace(/\?\./g, "?")
+    .replace(/!\./g, "!")
+    .trim();
+}
+
+function categoryFrom(input: AdsFormInput): ProductCategory {
+  const raw = `${input.productType} ${input.productName} ${input.targetAudience} ${input.mainProblem} ${input.audienceDesire} ${input.mainBenefit}`.toLowerCase();
+
+  const order: ProductCategory[] = ["finance", "wellness", "beauty", "food", "saas", "creative", "ecommerce", "local", "digital", "service"];
+  return order.find((category) => hasAny(raw, categoryKeywords[category])) || "general";
+}
+
+function normalizeAudience(rawAudience: string, category: ProductCategory): string {
+  const audience = compact(rawAudience);
+  if (audience.length > 3) return lowerFirst(audience);
+
+  const fallbacks: Record<ProductCategory, string> = {
+    digital: "creator, freelance e principianti che vogliono partire online",
+    service: "professionisti che vogliono spiegare meglio il proprio servizio",
+    ecommerce: "persone che acquistano online e cercano un motivo chiaro per scegliere",
+    local: "clienti locali che valutano un servizio pratico e vicino",
+    finance: "persone interessate a gestire meglio decisioni economiche con prudenza",
+    wellness: "persone che vogliono migliorare la propria routine con più metodo",
+    beauty: "persone che cercano una routine beauty più ordinata e consapevole",
+    saas: "team e professionisti che vogliono semplificare un flusso di lavoro",
+    food: "clienti locali che scelgono dove mangiare in base a esperienza e praticità",
+    creative: "persone o business che vogliono valorizzare meglio il proprio progetto",
+    general: "persone che vogliono capire meglio il valore dell'offerta"
+  };
+
+  return fallbacks[category];
+}
+
+function interpretProblem(rawProblem: string, category: ProductCategory): string {
   const problem = compact(rawProblem);
   const lower = problem.toLowerCase();
 
-  if (!problem) {
-    if (category === "digital") return "ha idee sparse, ma non sa trasformarle in una prima offerta digitale";
-    return "sa di dover promuovere l'offerta, ma fatica a trovare un messaggio chiaro";
+  if (!problem || problem.length < 8) {
+    const fallbacks: Record<ProductCategory, string> = {
+      digital: "ha idee sparse, ma non sa trasformarle in una prima offerta digitale",
+      service: "fatica a spiegare il valore del servizio in modo semplice",
+      ecommerce: "vede molte alternative simili e ha bisogno di un motivo concreto per scegliere",
+      local: "rimanda la scelta perché non capisce subito cosa rende utile il servizio",
+      finance: "vuole più chiarezza prima di prendere decisioni economiche",
+      wellness: "fatica a mantenere una routine organizzata e sostenibile",
+      beauty: "non sa quale soluzione inserire nella propria routine senza confusione",
+      saas: "perde tempo in un processo manuale che potrebbe essere più ordinato",
+      food: "sceglie all'ultimo momento e ha bisogno di un motivo semplice per prenotare",
+      creative: "non riesce a presentare il valore del lavoro in modo immediato",
+      general: "sa di dover comunicare meglio l'offerta, ma non sa da dove partire"
+    };
+    return fallbacks[category];
   }
 
   if (hasAny(lower, ["entrata", "extra", "guadagn", "soldi", "reddito", "monetizz"])) {
-    return "vorrebbe creare un'entrata extra online, ma non sa da quale idea partire né come renderla vendibile";
+    return "vorrebbe creare un'entrata extra online, ma non sa da quale idea partire né come renderla sostenibile";
   }
 
-  if (hasAny(lower, ["creare", "lanciare", "vendere", "ottenere", "avere", "trovare", "costruire"]) && !hasAny(lower, ["non", "fatica", "problema", "blocc", "confus", "perde"])) {
+  if (hasAny(lower, ["creare", "lanciare", "vendere", "ottenere", "avere", "trovare", "costruire"]) && !hasAny(lower, ["non", "fatica", "blocc", "confus", "perde", "diffic"])) {
     if (category === "digital") return "vuole partire online, ma si perde tra idee, tutorial e passi poco chiari";
-    return `vuole arrivare al risultato, ma non ha ancora un percorso semplice da seguire`;
+    return "vuole arrivare al risultato, ma non ha ancora un percorso semplice da seguire";
   }
 
-  if (hasAny(lower, ["non so", "non sa", "confus", "blocc", "da dove", "zero"])) {
-    return problem;
-  }
-
-  if (hasAny(lower, ["tempo", "ore", "settimane"])) {
-    return "perde tempo tra tentativi, consigli sparsi e decisioni che rimanda";
-  }
-
-  return problem.startsWith("non") || problem.startsWith("fatica")
-    ? problem
-    : `${audience} vive questo blocco: ${problem}`;
+  return lowerFirst(problem);
 }
 
-function interpretDesire(rawDesire: string, category: NormalizedInput["productCategory"]): string {
+function interpretDesire(rawDesire: string, category: ProductCategory): string {
   const desire = compact(rawDesire);
   const lower = desire.toLowerCase();
 
-  if (!desire) {
-    if (category === "digital") return "creare qualcosa di proprio online con un percorso semplice";
-    return "capire il prossimo passo senza perdersi in tentativi casuali";
+  if (!desire || desire.length < 8) {
+    const fallbacks: Record<ProductCategory, string> = {
+      digital: "creare qualcosa di proprio online con una guida semplice",
+      service: "ricevere richieste più qualificate grazie a un messaggio più chiaro",
+      ecommerce: "scegliere un prodotto con più fiducia e meno dubbi",
+      local: "capire rapidamente perché prenotare o contattare il business",
+      finance: "valutare opzioni economiche con più ordine e prudenza",
+      wellness: "seguire un percorso più organizzato e sostenibile",
+      beauty: "trovare una soluzione adatta alla propria routine",
+      saas: "ridurre passaggi manuali e lavorare con più ordine",
+      food: "vivere un'esperienza piacevole senza perdere tempo nella scelta",
+      creative: "vedere esempi concreti e capire lo stile del lavoro",
+      general: "capire il prossimo passo senza perdersi in alternative simili"
+    };
+    return fallbacks[category];
   }
 
   if (hasAny(lower, ["step by step", "passo passo", "guida", "corso", "metodo", "percorso"])) {
@@ -140,20 +571,18 @@ function interpretDesire(rawDesire: string, category: NormalizedInput["productCa
     return "trasformare una prima idea in un prodotto digitale chiaro e presentabile";
   }
 
-  if (hasAny(lower, ["clienti", "lead", "contatti"])) {
-    return "attirare persone più interessate con un messaggio meno generico";
-  }
-
-  return desire;
+  return lowerFirst(desire);
 }
 
-function interpretBenefit(rawBenefit: string, category: NormalizedInput["productCategory"]): string {
+function interpretBenefit(rawBenefit: string, category: ProductCategory): string {
   const benefit = compact(rawBenefit);
-  const lower = benefit.toLowerCase();
+  const normalized = benefit.replace(/^aiuta\s+a\s+/i, "").replace(/^permette\s+di\s+/i, "");
+  const lower = normalized.toLowerCase();
 
-  if (!benefit) {
-    if (category === "digital") return "passare da un'idea vaga a un primo piano d'azione";
-    return "preparare una prima versione chiara da adattare e testare";
+  if (!normalized || normalized.length < 8) {
+    return category === "digital"
+      ? "passare da un'idea vaga a una prima direzione chiara"
+      : "creare una prima versione più chiara da adattare e testare";
   }
 
   if (hasAny(lower, ["idee", "pochi secondi", "velocemente", "rapidamente"])) {
@@ -164,28 +593,43 @@ function interpretBenefit(rawBenefit: string, category: NormalizedInput["product
     return "seguire un percorso ordinato invece di improvvisare";
   }
 
-  if (hasAny(lower, ["tempo", "risparmia"])) {
-    return "ridurre il tempo perso tra bozze, dubbi e tentativi poco ordinati";
-  }
-
-  return benefit;
-}
-
-function normalizeAudience(rawAudience: string, category: NormalizedInput["productCategory"]): string {
-  const audience = compact(rawAudience);
-  if (audience) return audience;
-  if (category === "digital") return "creator, freelance e principianti che vogliono partire online";
-  if (category === "service") return "professionisti e freelance che vendono servizi";
-  if (category === "ecommerce") return "persone che gestiscono un ecommerce o uno shop online";
-  if (category === "local") return "piccoli business locali";
-  return "persone che vogliono promuovere meglio la propria offerta";
+  return lowerFirst(normalized);
 }
 
 function normalizeOffer(rawOffer: string, productName: string): string {
   const offer = compact(rawOffer);
-  if (!offer) return `${productName} come percorso pratico per iniziare`;
+  if (!offer) return `${productName} come percorso pratico da valutare`;
   if (hasAny(offer, ["€", "euro", "lancio", "sconto", "invece"])) return offer;
-  return `${offer}, presentata come passo pratico per iniziare`;
+  return `${offer}, presentata come prossimo passo pratico`;
+}
+
+function productReference(productName: string, productType: string, seed: number) {
+  const references = [
+    productName,
+    "il percorso",
+    "la soluzione",
+    "questa offerta",
+    productType.includes("tool") ? "il tool" : "la proposta"
+  ];
+  return pick(references.filter(Boolean), seed);
+}
+
+function qualityScore(input: AdsFormInput): GeneratedAdsOutput["inputQualityScore"] {
+  const fields = [input.productType, input.productName, input.targetAudience, input.mainProblem, input.audienceDesire, input.mainBenefit, input.offer];
+  const filled = fields.filter((field) => compact(field).length >= 8).length;
+  const specificity = fields.reduce((sum, field) => sum + Math.min(compact(field).split(" ").length, 12), 0);
+  const score = Math.min(100, Math.round(filled * 10 + specificity * 1.5));
+  const suggestions: string[] = [];
+
+  if (compact(input.targetAudience).split(" ").length < 3) suggestions.push("Specifica meglio il pubblico: ruolo, livello di esperienza o situazione attuale.");
+  if (compact(input.mainProblem).split(" ").length < 5) suggestions.push("Descrivi un problema concreto, non solo una categoria di prodotto.");
+  if (compact(input.mainBenefit).split(" ").length < 4) suggestions.push("Aggiungi un beneficio pratico e verificabile, senza promettere risultati certi.");
+
+  return {
+    score,
+    label: score >= 78 ? "Brief forte" : score >= 55 ? "Brief utilizzabile" : "Brief da arricchire",
+    suggestions: suggestions.length ? suggestions : ["Brief abbastanza chiaro: genera 2/3 varianti e confronta gli angoli migliori."]
+  };
 }
 
 export function normalizeInput(input: AdsFormInput): NormalizedInput {
@@ -193,52 +637,57 @@ export function normalizeInput(input: AdsFormInput): NormalizedInput {
   const productType = compact(input.productType) || (productCategory === "digital" ? "percorso digitale" : "offerta");
   const productName = compact(input.productName) || sentenceCase(productType);
   const normalizedAudience = normalizeAudience(input.targetAudience, productCategory);
-  const normalizedProblem = interpretProblem(input.mainProblem, productCategory, normalizedAudience);
+  const normalizedProblem = interpretProblem(input.mainProblem, productCategory);
   const normalizedDesire = interpretDesire(input.audienceDesire, productCategory);
   const normalizedBenefit = interpretBenefit(input.mainBenefit, productCategory);
   const normalizedOffer = normalizeOffer(input.offer, productName);
   const platformLabel = input.platform === "Tutte" ? "Meta, TikTok e Instagram" : input.platform;
   const goalLabel = input.campaignGoal.toLowerCase();
   const toneLabel = input.tone.toLowerCase();
+  const isVague = qualityScore(input).score < 55;
+  const vagueSignals = qualityScore(input).suggestions;
 
-  const emotionalAngle =
-    productCategory === "digital"
-      ? "ridurre la confusione e sentirsi finalmente guidati nel primo passo online"
-      : "sentirsi più sicuri perché il messaggio diventa semplice da capire";
+  const emotionalAngle = productCategory === "digital"
+    ? "ridurre confusione e dare una prima direzione concreta"
+    : "rendere il prossimo passo più chiaro e meno rischioso";
 
-  const practicalAngle =
-    productCategory === "digital"
-      ? "trasformare una prima idea in un percorso o prodotto digitale da presentare"
-      : "costruire messaggi più chiari da usare in una campagna reale";
-
-  const ctaTheme =
-    productCategory === "digital"
-      ? "primo prodotto digitale"
-      : goalLabel.includes("messaggi")
-        ? "conversazione"
-        : "primo test pubblicitario";
-
-  const visualSubject =
-    productCategory === "digital"
-      ? "idea, appunti e mockup del prodotto digitale"
-      : "offerta, messaggio e anteprima dell'annuncio";
+  const practicalAngle = productCategory === "digital"
+    ? "mettere in ordine idea, pubblico, promessa e primi contenuti"
+    : "costruire un messaggio da testare con creatività semplici";
 
   return {
     productName,
     productType,
+    productReference: productReference(productName, productType, hashInput(input)),
     normalizedProblem,
     normalizedDesire,
     normalizedBenefit,
     normalizedOffer,
     normalizedAudience,
+    audienceShort: normalizedAudience.length > 70 ? "il pubblico giusto" : normalizedAudience,
     productCategory,
     emotionalAngle,
     practicalAngle,
     platformLabel,
     goalLabel,
     toneLabel,
-    ctaTheme,
-    visualSubject
+    ctaTheme: productCategory === "digital" ? "primo passo digitale" : "primo test",
+    visualSubject: productCategory === "digital" ? "appunti, idea e primo piano d'azione" : "offerta, promessa e creatività",
+    isVague,
+    vagueSignals
+  };
+}
+
+function buildPlan(input: AdsFormInput, seed: number): GenerationPlan {
+  const angle = pick(strategicAngles, seed);
+  return {
+    seed,
+    angle,
+    awareness: pick(awarenessLevels, seed, 5),
+    creativeType: pick(creativeTypes, seed, 11),
+    structure: pick(["problema-prospettiva-azione", "scenario-dimostrazione-cta", "errore-soluzione-test", "checklist-passo-successivo", "obiezione-risposta-soft"], seed, 17),
+    promiseFrame: pick(["chiarezza", "ordine", "primo passo", "meno dispersione", "variante da testare"], seed, 23),
+    visualFrame: pick(["screen recording", "mockup risultato", "checklist visuale", "b-roll scrivania", "dashboard/output"], seed, 29)
   };
 }
 
@@ -246,599 +695,547 @@ function isDigital(c: NormalizedInput) {
   return c.productCategory === "digital";
 }
 
-function audiencePhrase(c: NormalizedInput): string {
-  const audience = lowerFirst(c.normalizedAudience);
-
-  if (hasAny(audience, ["parte da zero", "principianti", "non sa", "da zero"])) return "chi parte da zero";
-  if (isDigital(c)) return "chi vuole creare qualcosa di proprio online";
-  if (c.productCategory === "service") return "professionisti e freelance che vogliono vendere servizi con più chiarezza";
-  if (c.productCategory === "ecommerce") return "chi vende online e vuole rendere l'offerta più immediata";
-  if (c.productCategory === "local") return "piccoli business locali che vogliono farsi scegliere più facilmente";
-  return audience;
-}
-
-function adPromiseFor(c: NormalizedInput, seed = 0): string {
-  const audience = audiencePhrase(c);
-  const digitalPromises = [
-    `${c.productName} aiuta ${audience} a trasformare un'idea confusa in un primo prodotto digitale, seguendo passaggi semplici e ordinati.`,
-    `${c.productName} è pensato per chi vuole partire online senza perdersi tra tutorial, dubbi e idee lasciate a metà.`,
-    `${c.productName} guida ${audience} verso una prima offerta digitale chiara: idea, pubblico, promessa e prossimi passi.`,
-    `${c.productName} porta ordine tra idea, pubblico e offerta, così il primo prodotto digitale diventa più facile da costruire.`
-  ];
-  const generalPromises = [
-    `${c.productName} trasforma un'offerta difficile da spiegare in un messaggio più chiaro da testare.`,
-    `${c.productName} è pensato per ${audience}: aiuta a chiarire problema, promessa e CTA prima di lanciare.`,
-    `${c.productName} porta ordine nel copy, così ogni annuncio parte da un angolo più specifico.`,
-    `${c.productName} guida chi deve promuovere un'offerta verso testi, hook e script più facili da adattare.`
-  ];
-
-  return cleanCopy(pick(isDigital(c) ? digitalPromises : generalPromises, seed));
-}
-
-function chooseBestHeadline(headlines: string[], productName: string): string {
-  const product = productName.toLowerCase();
-  const score = (headline: string) => {
-    const lower = headline.toLowerCase();
-    let points = 0;
-    if (hasAny(lower, ["idea", "prodotto", "parti", "inizia", "direzione", "offerta", "messaggio", "test", "chiarezza"])) points += 4;
-    if (hasAny(lower, ["primo", "digitale", "confusione", "tutorial", "ads"])) points += 2;
-    if (lower === product || lower.includes(product)) points -= 5;
-    if (headline.length > 34) points -= 1;
-    return points;
-  };
-
-  return [...headlines].sort((a, b) => score(b) - score(a))[0] || headlines[0];
-}
-
-function quickAnalysis(input: AdsFormInput): GeneratedAdsOutput["quickAnalysis"] {
-  const c = normalizeInput(input);
-
-  return {
-    perceivedProblem: isDigital(c)
-      ? `Il pubblico non cerca solo un corso: vuole capire come partire online senza perdersi tra mille consigli diversi.`
-      : `Il pubblico non ha bisogno di un'altra frase ad effetto: ha bisogno di capire perché questa offerta risolve un problema reale.`,
-    hiddenDesire: `Vuole ${c.normalizedDesire}, con la sensazione di avere un percorso chiaro e non l'ennesima promessa vaga. L'offerta va percepita così: ${lowerFirst(c.normalizedOffer)}.`,
-    adPromise: adPromiseFor(c),
-    emotionalLever: `Il punto emotivo è togliere confusione: il cliente vuole sentirsi capace di iniziare, anche se oggi non ha ancora un piano preciso.`,
-    possibleObjection: `“E se parto da zero o non so ancora quale idea scegliere?”`,
-    objectionAnswer: isDigital(c)
-      ? `Il messaggio deve rassicurare: non serve avere tutto pronto, serve un percorso pratico per scegliere una prima direzione e costruirla con ordine.`
-      : `Il messaggio deve chiarire che non si parte da una versione definitiva, ma da una prima direzione ragionata da adattare e testare.`
-  };
-}
-
-function salesAngles(input: AdsFormInput, seed: number): SalesAngle[] {
-  const c = normalizeInput(input);
-
-  const digitalAngles: SalesAngle[] = [
-    {
-      type: "Angolo problema",
-      title: "Troppe idee, nessuna direzione",
-      explanation: `Parla a chi vuole partire online ma resta bloccato tra opzioni, tutorial e dubbi.`,
-      example: `Vuoi creare qualcosa di tuo online, ma non sai da quale idea partire? ${c.productName} ti guida passo dopo passo verso il tuo primo prodotto digitale.`
-    },
-    {
-      type: "Angolo velocità",
-      title: "Prima direzione chiara",
-      explanation: `Non promette scorciatoie: promette meno dispersione e più ordine nel primo passo.`,
-      example: `Prima di perdere settimane tra consigli sparsi, segui un percorso pratico per capire cosa creare, come strutturarlo e come presentarlo.`
-    },
-    {
-      type: "Angolo semplicità",
-      title: "Partire senza complicare tutto",
-      explanation: `Rende accessibile il tema prodotto digitale anche a chi parte da zero.`,
-      example: `Non devi essere un esperto per iniziare. Ti serve una guida semplice che trasformi un'idea in un percorso vendibile.`
-    },
-    {
-      type: "Angolo risultato",
-      title: "Dal pensiero al primo prodotto",
-      explanation: `Mostra un risultato concreto e realistico: una prima offerta da costruire.`,
-      example: `${c.productName} ti aiuta a mettere ordine: idea, pubblico, promessa e primo prodotto da presentare.`
-    },
-    {
-      type: "Angolo confronto prima/dopo",
-      title: "Da confusione a piano",
-      explanation: `Fa vedere il passaggio da appunti sparsi a percorso chiaro.`,
-      example: `Prima hai mille idee aperte. Dopo hai una direzione, una struttura e il prossimo passo per iniziare online.`
-    }
-  ];
-
-  const generalAngles: SalesAngle[] = [
-    {
-      type: "Angolo problema",
-      title: "Il messaggio oggi non è abbastanza chiaro",
-      explanation: `Parte dal problema interpretato: ${c.normalizedProblem}.`,
-      example: `Se il cliente non capisce subito perché dovrebbe fermarsi, l'offerta passa inosservata. ${c.productName} aiuta a renderla più leggibile.`
-    },
-    {
-      type: "Angolo velocità",
-      title: "Meno tempo tra bozze e tentativi",
-      explanation: `Valorizza il vantaggio pratico senza sembrare miracoloso.`,
-      example: `Invece di riscrivere lo stesso annuncio dieci volte, parti da messaggi già orientati a problema, promessa e CTA.`
-    },
-    {
-      type: "Angolo semplicità",
-      title: "Copy semplice, non superficiale",
-      explanation: `Fa capire che il messaggio può essere diretto anche quando l'offerta è articolata.`,
-      example: `Il cliente non deve decifrare la tua offerta. Deve capire in pochi secondi cosa cambia per lui.`
-    },
-    {
-      type: "Angolo risultato",
-      title: "Più varianti da testare",
-      explanation: `Porta l'attenzione su angoli diversi, utili per ${c.goalLabel}.`,
-      example: `${c.productName} ti dà più direzioni da provare: problema, desiderio, prima/dopo e obiezione principale.`
-    },
-    {
-      type: "Angolo confronto prima/dopo",
-      title: "Da copy vago a messaggio vendibile",
-      explanation: `Mostra il miglioramento percepito senza promettere performance garantite.`,
-      example: `Prima: frasi belle ma deboli. Dopo: un messaggio più specifico, adatto a una campagna reale.`
-    }
-  ];
-
-  return rotate(isDigital(c) ? digitalAngles : generalAngles, seed);
-}
-
-function primaryTexts(input: AdsFormInput, seed: number): string[] {
-  const c = normalizeInput(input);
-
+function adPromiseFor(c: NormalizedInput, plan: GenerationPlan): string {
   const digital = [
-    `Vuoi creare un prodotto digitale ma non sai da dove partire? ${c.productName} ti guida passo dopo passo.`,
-    `Un prodotto digitale non nasce guardando altri tutorial. Nasce quando scegli un'idea, un pubblico e una promessa chiara.`,
-    `Hai salvato decine di video, ma il tuo prodotto digitale non esiste ancora. Forse ti serve meno teoria e più direzione.`,
-    `Prima di creare pagine, grafiche e contenuti, chiarisci cosa vendere e a chi.`,
-    `Parti da un percorso ordinato: idea, pubblico, promessa e prima offerta digitale.`
+    `${c.productName} aiuta chi parte da zero a trasformare idee sparse in una prima direzione digitale, con passaggi semplici da seguire.`,
+    `${c.productName} è pensato per chi vuole creare qualcosa online senza perdersi tra tutorial, dubbi e appunti lasciati a metà.`,
+    `${c.productName} porta ordine tra idea, pubblico e offerta, così il primo prodotto digitale diventa più facile da presentare.`,
+    `Il messaggio centrale: passare da confusione a primo piano d'azione, senza promettere scorciatoie o risultati automatici.`
   ];
 
   const general = [
-    `Il cliente capisce davvero perché scegliere ${c.productName}? Parti da una promessa più chiara prima del prossimo test.`,
-    `Se l'offerta è confusa, anche una buona ads fatica a funzionare.`,
-    `Immagina una campagna con hook, headline e CTA coerenti invece di frasi cambiate a caso.`,
-    `Prima di investire budget, chiarisci cosa cambia per il cliente e quale passo deve fare dopo.`,
-    `Parti da un messaggio chiaro prima di spendere budget.`
+    `${c.productName} aiuta a trasformare un'offerta difficile da spiegare in un messaggio più chiaro da testare.`,
+    `La promessa credibile è rendere più leggibili problema, beneficio e prossimo passo prima di lanciare la campagna.`,
+    `Il tool non sostituisce il test: prepara varianti più ordinate per capire quale angolo merita attenzione.`,
+    `Il messaggio centrale: meno frasi generiche, più contesto utile per chi deve valutare l'offerta.`
   ];
 
-  return rotate(isDigital(c) ? digital : general, seed).map((item) => limit(item, 132));
+  return pick(isDigital(c) ? digital : general, plan.seed);
 }
 
-function headlines(input: AdsFormInput, seed: number): string[] {
-  const c = normalizeInput(input);
+function limit(text: string, max: number) {
+  const cleaned = cleanCopy(text);
+  return cleaned.length <= max ? cleaned : `${cleaned.slice(0, max - 1).trim()}…`;
+}
 
-  const digital = [
-    "Parti dal tuo primo prodotto",
-    "Da idea a prodotto digitale",
-    "Crea il tuo primo digitale",
-    "Non sai da dove iniziare?",
-    "Inizia senza confusione",
-    "Guida pratica per partire",
-    "Il primo passo è qui",
-    "Trasforma l'idea in offerta",
-    "Meno tutorial, più direzione",
-    `${limit(c.productName, 28)}`
+function reduceProductRepetition(text: string, c: NormalizedInput): string {
+  const product = c.productName.trim();
+  if (!product || product.length < 4) return text;
+  const escaped = product.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  let count = 0;
+
+  return text.replace(new RegExp(escaped, "gi"), (match) => {
+    count += 1;
+    if (count === 1) return match;
+    return pick(["il percorso", "il tool", "questa offerta", "la soluzione"], count);
+  });
+}
+
+function finalizeItems(items: string[], c: NormalizedInput, bucket: keyof typeof sessionMemory, count: number, maxLength?: number) {
+  const cleaned = uniqueBySimilarity(
+    items.map((item) => reduceProductRepetition(cleanCopy(item), c)),
+    sessionMemory[bucket],
+    0.58
+  ).map((item) => (maxLength ? limit(item, maxLength) : item));
+
+  const selected = cleaned.slice(0, count);
+  if (selected.length < count) {
+    const fallbacks = fallbackItems(bucket, c, sessionMemory[bucket].length + selected.length)
+      .map((item) => (maxLength ? limit(item, maxLength) : item));
+    for (const fallback of fallbacks) {
+      if (selected.length >= count) break;
+      if (!selected.some((item) => similarity(item, fallback) > 0.52)) selected.push(fallback);
+    }
+  }
+  let guard = 0;
+  while (selected.length < count && guard < 20) {
+    const fallback = maxLength
+      ? limit(`${fallbackItems(bucket, c, guard)[guard % fallbackItems(bucket, c, guard).length]} ${guard + 1}`, maxLength)
+      : `${fallbackItems(bucket, c, guard)[guard % fallbackItems(bucket, c, guard).length]} ${guard + 1}`;
+    selected.push(fallback);
+    guard += 1;
+  }
+  remember(bucket, selected);
+  return selected;
+}
+
+function fallbackItems(bucket: keyof typeof sessionMemory, c: NormalizedInput, offset: number): string[] {
+  const contexts = [
+    "prima del budget",
+    "per il prossimo test",
+    "da adattare oggi",
+    "con più chiarezza",
+    "senza partire da zero",
+    "per una bozza migliore",
+    "prima del lancio",
+    "con angolo diverso",
+    "per il pubblico giusto",
+    "da confrontare"
   ];
+  const context = (index: number) => contexts[(offset + index) % contexts.length];
 
-  const general = [
-    "Messaggio più chiaro",
-    "Prima sistema il copy",
-    "Rendi l'offerta leggibile",
-    "Più angoli da testare",
-    "Hook pronti da provare",
-    "Annunci meno vaghi",
-    "Copy per il primo test",
-    "Dai forma alla promessa",
-    "CTA più specifiche",
-    `${limit(c.productName, 32)}`
-  ];
-
-  return rotate(isDigital(c) ? digital : general, seed).slice(0, 10).map((item) => limit(item, 40));
-}
-
-function descriptions(input: AdsFormInput, seed: number): string[] {
-  const c = normalizeInput(input);
-  const items = isDigital(c)
-    ? ["Guida pratica", "Parti da zero", "Metodo ordinato", "Prima idea chiara", "Percorso step by step"]
-    : ["Copy da adattare", "Più chiarezza", "Primo test pronto", "Hook e CTA", "Messaggi vendibili"];
-
-  return rotate(items, seed).map((item) => limit(item, 30));
-}
-
-function videoHooks(input: AdsFormInput, seed: number): GeneratedAdsOutput["videoHooks"] {
-  const c = normalizeInput(input);
-
-  if (isDigital(c)) {
-    return {
-      problem: rotate(
-        [
-          "Vuoi vendere online ma non sai cosa creare?",
-          "Hai mille idee e nessuna direzione chiara?",
-          "Stai guardando tutorial, ma non stai costruendo nulla."
-        ],
-        seed
-      ),
-      desire: rotate(
-        [
-          "Immagina di avere il primo prodotto digitale già strutturato.",
-          "Da una semplice idea può nascere qualcosa di tuo.",
-          "Parti online con un percorso che ti dice cosa fare dopo."
-        ],
-        seed
-      ),
-      provocative: rotate(
-        [
-          "Il problema non è partire da zero. È partire senza metodo.",
-          "Non ti manca un'altra idea. Ti manca una direzione."
-        ],
-        seed
-      ),
-      curiosity: rotate(
-        [
-          "Prima di scegliere cosa vendere online, guarda questo.",
-          "Il primo prodotto digitale nasce da una scelta semplice."
-        ],
-        seed
-      )
-    };
+  if (bucket === "headlines") {
+    return headlineNouns.flatMap((noun, index) => [
+      `${sentenceCase(noun)} ${context(index)}`,
+      `Nuova ${noun} ${context(index + 2)}`,
+      `${sentenceCase(noun)} più chiara ${index % 2 === 0 ? "" : "ora"}`.trim()
+    ]);
   }
 
+  if (bucket === "ctas") {
+    return ctaObjects.flatMap((object, index) => [
+      `${sentenceCase(pick(ctaVerbs, offset, index))} ${object} ${context(index)}`,
+      `${sentenceCase(pick(ctaVerbs, offset, index + 3))} ${object}`
+    ]);
+  }
+
+  if (bucket === "hooks") {
+    return headlineNouns.flatMap((noun, index) => [
+      `Prima di lavorare su ${noun}, chiarisci il prossimo passo.`,
+      `Se ${noun} resta vaga, il test ti dirà poco.`,
+      `Una buona bozza parte da ${context(index)}.`
+    ]);
+  }
+
+  return [
+    `Lavora su ${c.practicalAngle} ${context(1)}.`,
+    `Costruisci una variante ${context(2)}.`,
+    `Parti da ${c.emotionalAngle} ${context(3)}.`,
+    `Trasforma il brief in una bozza ${context(4)}.`,
+    `Prepara un messaggio più leggibile ${context(5)}.`,
+    `Crea una variante con un angolo diverso ${context(6)}.`,
+    `Mostra il prossimo passo in modo più concreto ${context(7)}.`,
+    `Usa problema, promessa e CTA come struttura ${context(8)}.`
+  ];
+}
+
+function quickAnalysis(input: AdsFormInput, plan: GenerationPlan): GeneratedAdsOutput["quickAnalysis"] {
+  const c = normalizeInput(input);
+
   return {
-    problem: rotate(
-      [
-        "Il tuo annuncio spiega troppo e convince poco?",
-        "Se il cliente non capisce subito il valore, scorre oltre.",
-        "Hai un'offerta valida, ma il messaggio resta debole?"
-      ],
-      seed
-    ),
-    desire: rotate(
-      [
-        "Un buon annuncio parte da una promessa chiara.",
-        "Trasforma l'offerta in un messaggio più facile da scegliere.",
-        "Dai al cliente un motivo concreto per fermarsi."
-      ],
-      seed
-    ),
-    provocative: rotate(
-      [
-        "Il prodotto non è sempre il problema. A volte è come lo racconti.",
-        "Prima di aumentare budget, rendi il copy più specifico."
-      ],
-      seed
-    ),
-    curiosity: rotate(
-      [
-        "Prima di lanciare la prossima ads, controlla questo.",
-        "C'è una domanda che il tuo annuncio deve risolvere subito."
-      ],
-      seed
-    )
+    perceivedProblem: c.isVague
+      ? `Il brief è ancora generico: conviene lavorare su un angolo "${plan.angle}", utile per trasformare una categoria ampia in una promessa più concreta.`
+      : `Il pubblico non cerca solo ${lowerFirst(c.productType)}: vuole un modo più semplice per superare questo blocco: ${c.normalizedProblem}.`,
+    hiddenDesire: `Il desiderio reale è ${c.normalizedDesire}, ma senza sentirsi forzato da promesse esagerate o claim difficili da dimostrare.`,
+    adPromise: adPromiseFor(c, plan),
+    emotionalLever: `La leva più sicura è la chiarezza: mostrare un prossimo passo credibile, non una trasformazione garantita.`,
+    possibleObjection: `“E se non fosse adatto al mio caso o richiedesse troppo tempo?”`,
+    objectionAnswer: `Rispondi con esempi pratici, output copiabili e una CTA soft: l'obiettivo è creare una prima bozza da adattare e testare.`
   };
 }
 
-function scripts8(input: AdsFormInput, seed: number): VideoScript[] {
+function primaryTexts(input: AdsFormInput, plan: GenerationPlan): string[] {
   const c = normalizeInput(input);
+  const curated = isDigital(c)
+    ? [
+        `Vuoi creare un prodotto digitale ma non sai da dove partire? Parti da idea, pubblico e promessa prima di pensare alla grafica.`,
+        `Un prodotto digitale non nasce salvando altri tutorial. Nasce quando scegli una direzione e la trasformi in una prima offerta.`,
+        `Hai appunti, video salvati e idee sparse? Crea una bozza più ordinata prima di perdere altro tempo tra alternative.`,
+        `Prima di scrivere pagine, caption e ads, chiarisci cosa vendere, per chi e con quale promessa credibile.`,
+        `Trasforma il brief in hook, headline e script video da adattare: una base utile per testare il primo messaggio.`
+      ]
+    : [
+        `Il cliente capisce davvero perché scegliere questa offerta? Parti da una promessa più chiara prima del prossimo test.`,
+        `Se l'offerta è confusa, anche una buona creatività fatica a funzionare. Prima chiarisci messaggio, beneficio e CTA.`,
+        `Immagina una campagna con hook, headline e script coerenti invece di frasi cambiate a caso.`,
+        `Prima di investire budget, chiarisci cosa cambia per il cliente e quale passo deve fare dopo.`,
+        `Parti da un messaggio chiaro, poi testa visual, hook e CTA senza promettere risultati automatici.`
+      ];
 
-  const digital: VideoScript[] = [
-    {
-      title: "Primo prodotto digitale",
-      duration: "8s",
-      steps: [
-        `Scena 1: persona davanti al PC. Testo a schermo: "Vuoi vendere online ma non sai cosa creare?" Voice over: "Hai voglia di partire, ma non sai da dove iniziare."`,
-        `Scena 2: appunti confusi sullo schermo. Testo: "Troppe idee, zero direzione". Voice over: "Il rischio è perdere settimane tra consigli sparsi."`,
-        `Scena 3: mockup di ${c.productName}. Testo: "${c.productName}". Voice over: "Qui segui un percorso semplice e ordinato."`,
-        `Scena 4: schermata finale. Testo: "Parti dal tuo primo prodotto digitale". Voice over: "Inizia dal primo passo concreto."`
-      ]
-    },
-    {
-      title: "Da idea a direzione",
-      duration: "8s",
-      steps: [
-        `Scena 1: zoom su una nota con scritto "idea". Testo: "Hai un'idea?" Voice over: "Un'idea da sola non basta."`,
-        `Scena 2: tre frecce confuse. Testo: "Cosa creo? Per chi? Come lo vendo?" Voice over: "Serve una direzione."`,
-        `Scena 3: anteprima del percorso. Testo: "Metodo step by step". Voice over: "${c.productName} ti aiuta a ordinarla."`,
-        `Scena 4: CTA a schermo. Testo: "Crea la tua prima idea digitale". Voice over: "Parti con il percorso guidato."`
-      ]
-    },
-    {
-      title: "Stop tutorial infiniti",
-      duration: "8s",
-      steps: [
-        `Scena 1: scroll infinito di video. Testo: "Ancora tutorial?" Voice over: "Guardare video non significa partire."`,
-        `Scena 2: persona che chiude le schede. Testo: "Serve un piano". Voice over: "Ti serve un ordine semplice."`,
-        `Scena 3: mockup corso. Testo: "${c.productName}". Voice over: "Segui i passaggi e costruisci la tua prima offerta."`,
-        `Scena 4: CTA. Testo: "Inizia senza confusione". Voice over: "Accedi alla guida pratica."`
-      ]
-    }
+  const candidates = [...rotate(curated, plan.seed).slice(0, 5), ...fillFromPatterns(openingPatterns, c, plan)];
+  return finalizeItems(candidates, c, "structures", 5, 150);
+}
+
+function chooseBestPrimaryText(items: string[], productName: string): string {
+  const product = simplify(productName);
+  const scored = items.map((item) => {
+    const lower = simplify(item);
+    let score = 0;
+    if (hasAny(lower, ["prima", "chiarisci", "bozza", "testare", "direzione", "promessa", "offerta", "script", "headline"])) score += 5;
+    if (hasAny(lower, ["vuoi", "hai"])) score += 1;
+    if (lower.includes(product)) score -= 2;
+    if (item.length >= 80 && item.length <= 150) score += 3;
+    if (item.includes("?")) score += 1;
+    return { item, score };
+  });
+
+  return scored.sort((a, b) => b.score - a.score)[0]?.item || items[0];
+}
+
+function headlines(input: AdsFormInput, plan: GenerationPlan): string[] {
+  const c = normalizeInput(input);
+  const categorySpecific = isDigital(c)
+    ? digitalHeadlines
+    : c.productCategory === "wellness"
+      ? ["Routine più ordinata", "Un percorso più sostenibile", "Meno caos, più metodo", "Riparti da piccoli passi"]
+      : c.productCategory === "finance"
+        ? ["Scelte più consapevoli", "Prima capisci, poi decidi", "Più ordine nelle decisioni", "Guida pratica e prudente"]
+        : c.productCategory === "food"
+          ? ["Prenota con più gusto", "Il motivo per scegliere", "Una pausa fatta bene", "Menu più chiaro"]
+          : headlinePatterns;
+
+  return finalizeItems(rotate([...categorySpecific, ...headlinePatterns, ...expandHeadlines(c, plan)], plan.seed), c, "headlines", 10, 40);
+}
+
+function descriptions(input: AdsFormInput, plan: GenerationPlan): string[] {
+  const c = normalizeInput(input);
+  return finalizeItems(rotate([
+    ...descriptionBank,
+    "Da adattare e testare",
+    "Niente promesse forzate",
+    "Più ordine nel copy",
+    "Brief più leggibile",
+    isDigital(c) ? "Primo piano digitale" : "Messaggio più chiaro"
+  ], plan.seed), c, "structures", 5, 30);
+}
+
+function videoHooks(input: AdsFormInput, plan: GenerationPlan): GeneratedAdsOutput["videoHooks"] {
+  const c = normalizeInput(input);
+  const problem = [
+    `Prima di ${pick(["mettere budget", "registrare un video", "aprire Canva"], plan.seed)}, chiarisci il messaggio.`,
+    `Il problema non è sempre l'offerta. Spesso è il modo in cui viene spiegata.`,
+    isDigital(c) ? "Hai mille idee e nessuna direzione chiara?" : "Il cliente capisce davvero il prossimo passo?",
+    `Se ${c.normalizedProblem}, l'annuncio deve semplificare, non spingere.`
   ];
 
-  const general: VideoScript[] = [
+  const desire = [
+    `Una bozza chiara vale più di dieci idee lasciate a metà.`,
+    `Da appunti sparsi a materiali promozionali pronti da adattare.`,
+    `Immagina di avere già hook, headline e script da confrontare.`
+  ];
+
+  const provocative = [
+    `Non ti manca un'altra frase creativa. Ti manca un angolo da testare.`,
+    `Più budget non salva un messaggio poco chiaro.`,
+    `Se sembra una promessa per tutti, spesso non parla a nessuno.`
+  ];
+
+  const curiosity = [
+    `C'è una domanda che ogni ads dovrebbe risolvere subito.`,
+    `Prima del visual, controlla questa parte del copy.`,
+    `Ecco come trasformare un brief confuso in una bozza testabile.`
+  ];
+
+  const expanded = expandHooks(c, plan);
+  const all = {
+    problem: finalizeItems(rotate([...problem, ...expanded], plan.seed), c, "hooks", 3),
+    desire: finalizeItems(rotate([...desire, ...expanded], plan.seed + 3), c, "hooks", 3),
+    provocative: finalizeItems(rotate([...provocative, ...expanded], plan.seed + 7), c, "hooks", 2),
+    curiosity: finalizeItems(rotate([...curiosity, ...expanded], plan.seed + 11), c, "hooks", 2)
+  };
+  return all;
+}
+
+function scriptStep(scene: string, text: string, voice: string, cta?: string) {
+  return cta
+    ? `Scena: ${scene}. Testo a schermo: "${text}". Voice over: "${voice}". CTA finale: "${cta}".`
+    : `Scena: ${scene}. Testo a schermo: "${text}". Voice over: "${voice}".`;
+}
+
+function scripts8(input: AdsFormInput, plan: GenerationPlan): VideoScript[] {
+  const c = normalizeInput(input);
+  const scripts: VideoScript[] = [
     {
-      title: "Messaggio più chiaro",
+      title: "Blocco iniziale",
       duration: "8s",
       steps: [
-        `Scena 1: annuncio con testo vago. Testo: "Il copy non convince?" Voice over: "A volte l'offerta è buona, ma il messaggio non arriva."`,
-        `Scena 2: evidenzia problema e promessa. Testo: "Problema + promessa". Voice over: "Prima chiarisci cosa cambia per il cliente."`,
-        `Scena 3: schermata con output. Testo: "Hook, headline, CTA". Voice over: "${c.productName} ti dà varianti da adattare."`,
-        `Scena 4: CTA. Testo: "Prepara il primo test". Voice over: "Parti da un messaggio più specifico."`
+        scriptStep("persona davanti al PC con appunti aperti", isDigital(c) ? "Troppe idee?" : "Messaggio poco chiaro?", "Il blocco spesso nasce prima della creatività."),
+        scriptStep("zoom su una bozza disordinata", "Prima chiarisci l'angolo", "Scegli problema, promessa e prossimo passo."),
+        scriptStep(`mockup di ${c.productReference}`, "Bozza pronta da adattare", "Genera una base più ordinata."),
+        scriptStep("schermata finale con pulsante", "Prepara il primo test", "Copia, adatta e confronta le varianti.", pick([...ctaBank, ...digitalCtas], plan.seed))
       ]
     },
     {
       title: "Prima del budget",
       duration: "8s",
       steps: [
-        `Scena 1: cursore su budget ads. Testo: "Prima di spendere". Voice over: "Prima di aumentare budget, guarda il copy."`,
-        `Scena 2: copy generico barrato. Testo: "Troppo vago". Voice over: "Il cliente deve capire subito il valore."`,
-        `Scena 3: nuove headline. Testo: "Più angoli". Voice over: "Genera direzioni diverse da testare."`,
-        `Scena 4: CTA. Testo: "Crea la tua ads". Voice over: "Prepara una versione più chiara."`
+        scriptStep("cursore su budget campagna", "Prima di spendere", "Controlla se il messaggio è abbastanza chiaro."),
+        scriptStep("copy generico barrato", "Troppo vago", "Una frase generica rende il test meno utile."),
+        scriptStep("tre headline in colonna", "3 angoli da provare", "Prepara varianti diverse."),
+        scriptStep("output ordinato", "Testa con criterio", "Parti da una bozza strategica.", pick(ctaBank, plan.seed + 4))
       ]
     },
     {
-      title: "Offerta leggibile",
+      title: "Output mobile",
       duration: "8s",
       steps: [
-        `Scena 1: pagina offerta. Testo: "Si capisce subito?" Voice over: "Il cliente non deve indovinare."`,
-        `Scena 2: zoom su promessa. Testo: "Una promessa chiara". Voice over: "Serve una frase che dica cosa cambia."`,
-        `Scena 3: output del tool. Testo: "Copy pronto da adattare". Voice over: "${c.productName} costruisce la prima base."`,
-        `Scena 4: CTA. Testo: "Metti il messaggio in test". Voice over: "Usalo per il prossimo lancio."`
+        scriptStep("telefono in mano con form compilato", "Inserisci il brief", "Bastano prodotto, pubblico e problema."),
+        scriptStep("loading del tool", "Hook + script + CTA", "Il tool organizza i materiali."),
+        scriptStep("card campagna pronta", "Campagna da adattare", "Non è magia, è una base da testare."),
+        scriptStep("copia sezione", "Copia e modifica", "Rendi il copy coerente con la tua offerta.", pick(ctaBank, plan.seed + 8))
       ]
     }
   ];
 
-  return rotate(isDigital(c) ? digital : general, seed);
+  remember("scripts", scripts.map((script) => script.title));
+  return rotate(scripts, plan.seed);
 }
 
-function scripts15(input: AdsFormInput, seed: number): VideoScript[] {
+function scripts15(input: AdsFormInput, plan: GenerationPlan): VideoScript[] {
   const c = normalizeInput(input);
-
-  const digital: VideoScript[] = [
+  const scripts: VideoScript[] = [
     {
-      title: "Percorso pratico",
+      title: "Scenario concreto",
       duration: "15s",
       steps: [
-        `Apertura: testo a schermo "Vuoi creare qualcosa online?" Voice over: "Se hai idee ma non sai da quale partire, non sei l'unico."`,
-        `Problema: scena con appunti e video salvati. Voice over: "Il problema è la confusione: troppi consigli, nessun piano."`,
-        `Promessa: mostra ${c.productName}. Voice over: "Questo percorso ti aiuta a scegliere una direzione e costruire il primo prodotto digitale."`,
-        `Esempio: overlay "idea, pubblico, promessa, offerta". Voice over: "Un passo alla volta, senza complicare tutto."`,
-        `CTA finale: testo "Inizia dal tuo primo prodotto". Voice over: "Accedi alla guida pratica e parti da qui."`
+        scriptStep("scrivania con note e tab aperte", "Hai il prodotto, manca il messaggio", `Quando il pubblico deve valutare un'offerta, spesso il blocco è capire cosa dire prima.`),
+        scriptStep("evidenzia problema, promessa, CTA", "3 pezzi da chiarire", "Parti da problema reale, promessa credibile e prossimo passo."),
+        scriptStep("dashboard con output", "Hook, headline, script", "Genera varianti da adattare, non un testo unico da copiare alla cieca."),
+        scriptStep("schermata campagna", "Testa 2/3 varianti", "Confronta angoli diversi e migliora con i dati.", pick(ctaBank, plan.seed + 2))
       ]
     },
     {
-      title: "Da zero a digitale",
+      title: "Demo semplice",
       duration: "15s",
       steps: [
-        `Apertura: testo "Parti da zero?" Voice over: "Non ti serve avere già tutto chiaro."`,
-        `Problema: schermata con domande aperte. Voice over: "Ti serve capire cosa creare, per chi e con quale promessa."`,
-        `Promessa: mockup corso. Voice over: "${c.productName} ti guida passo dopo passo."`,
-        `Esempio: mostra una mappa semplice. Voice over: "Così passi da idea vaga a prima offerta."`,
-        `CTA finale: testo "Crea la tua prima idea digitale". Voice over: "Parti con il percorso step by step."`
+        scriptStep("screen recording del form", "Brief in 60 secondi", "Inserisci prodotto, pubblico, problema e beneficio."),
+        scriptStep("output che appare a sezioni", "Copy e prompt ordinati", "Ottieni testi Meta Ads, script video e idee visual."),
+        scriptStep("sezione Canva/InVideo", "Creatività più veloce", "Usa i prompt per trasformare il copy in visual o video."),
+        scriptStep("pulsante copia", "Copia, adatta, testa", "Controlla sempre coerenza e policy prima di pubblicare.", pick(ctaBank, plan.seed + 5))
       ]
     },
     {
-      title: "Meno tutorial",
+      title: "Obiezione",
       duration: "15s",
       steps: [
-        `Apertura: testo "Basta salvare video". Voice over: "Se continui a salvare tutorial, ma non parti mai, forse ti manca una guida."`,
-        `Problema: persona indecisa davanti al PC. Voice over: "La confusione ti fa rimandare."`,
-        `Promessa: mostra ${c.productName}. Voice over: "Qui trovi un percorso pratico per costruire qualcosa di tuo online."`,
-        `Esempio: overlay "primo passo, struttura, offerta". Voice over: "Semplice, ordinato, applicabile."`,
-        `CTA finale: testo "Inizia senza confusione". Voice over: "Accedi e costruisci il tuo primo digitale."`
+        scriptStep("persona indecisa davanti alla campagna", "Non sai se il copy basta?", "Non serve indovinare al primo colpo."),
+        scriptStep("due varianti affiancate", "Angoli diversi", "Prepara una variante problema e una variante desiderio."),
+        scriptStep("note A/B test", "Confronta i segnali", "Guarda quale messaggio genera più interesse."),
+        scriptStep("campagna pronta", "Parti da una base", "Poi adatta tono, prova sociale e visual.", pick(ctaBank, plan.seed + 9))
       ]
     }
   ];
 
-  const general: VideoScript[] = [
-    {
-      title: "Copy meno vago",
-      duration: "15s",
-      steps: [
-        `Apertura: testo "Il tuo annuncio convince?" Voice over: "Un'offerta buona può sembrare debole se il messaggio è troppo generico."`,
-        `Problema: evidenzia frasi vaghe. Voice over: "Il cliente deve capire problema, beneficio e prossimo passo."`,
-        `Promessa: mostra ${c.productName}. Voice over: "Genera testi, hook e CTA più facili da adattare."`,
-        `Esempio: overlay prima/dopo. Voice over: "Da frase vaga a messaggio più specifico."`,
-        `CTA finale: testo "Prepara il primo test". Voice over: "Crea una versione più chiara."`
-      ]
-    },
-    {
-      title: "Prima del lancio",
-      duration: "15s",
-      steps: [
-        `Apertura: testo "Prima di lanciare". Voice over: "Prima di mettere budget, controlla se il copy dice davvero qualcosa."`,
-        `Problema: scena gestore ads. Voice over: "Se la promessa è debole, anche il visual fa più fatica."`,
-        `Promessa: output con headline. Voice over: "${c.productName} ti aiuta a trovare angoli diversi."`,
-        `Esempio: mostra tre headline. Voice over: "Così puoi testare messaggi, non solo grafiche."`,
-        `CTA finale: testo "Crea la tua ads". Voice over: "Parti da copy più specifici."`
-      ]
-    },
-    {
-      title: "Cliente giusto",
-      duration: "15s",
-      steps: [
-        `Apertura: testo "Parli al cliente giusto?" Voice over: "Un annuncio non deve parlare a tutti."`,
-        `Problema: pubblico generico barrato. Voice over: "Deve far sentire chiamata la persona giusta."`,
-        `Promessa: mostra messaggi generati. Voice over: "Costruisci varianti intorno a problema, desiderio e obiezione."`,
-        `Esempio: overlay "hook, promessa, CTA". Voice over: "Tre pezzi semplici, ma decisivi."`,
-        `CTA finale: testo "Metti il messaggio in test". Voice over: "Genera la tua prossima versione."`
-      ]
-    }
-  ];
-
-  return rotate(isDigital(c) ? digital : general, seed);
+  remember("scripts", scripts.map((script) => script.title));
+  return rotate(scripts, plan.seed);
 }
 
-function scripts30(input: AdsFormInput, seed: number): VideoScript[] {
+function scripts30(input: AdsFormInput, plan: GenerationPlan): VideoScript[] {
   const c = normalizeInput(input);
-
-  const digital: VideoScript[] = [
+  const scripts: VideoScript[] = [
     {
       title: "Video parlato naturale",
       duration: "30s",
       steps: [
-        `Hook: testo a schermo "Vuoi creare un prodotto digitale?" Voice over: "Se vuoi iniziare online ma non sai cosa creare, il problema non è la mancanza di idee."`,
-        `Problema concreto: scena con appunti e tab aperte. Voice over: "Il problema è che hai troppe informazioni sparse e nessun percorso da seguire."`,
-        `Mini storia: voice over: "Magari salvi video, prendi appunti, cambi idea ogni giorno e alla fine non costruisci niente."`,
-        `Soluzione: mostra mockup di ${c.productName}. Voice over: "Questo percorso ti aiuta a scegliere una direzione, definire il pubblico e costruire la prima offerta digitale."`,
-        `Perché funziona: overlay "idea, struttura, offerta". Voice over: "Non promette scorciatoie: ti dà ordine e passaggi pratici."`,
-        `CTA: testo "Parti dal tuo primo prodotto digitale". Voice over: "Accedi alla guida pratica e inizia dal primo passo."`
+        scriptStep("creator al laptop", "Prima del budget, il messaggio", "Molte campagne partono dalla grafica o dal budget, ma il primo filtro è più semplice: il pubblico capisce perché dovrebbe interessarsi?"),
+        scriptStep("bozza confusa sullo schermo", "Il brief va ordinato", `Se il problema è ${c.normalizedProblem}, il copy deve renderlo chiaro senza accusare l'utente.`),
+        scriptStep("output in sezioni", "Hook, copy, script, prompt", "Ads Creator PRO organizza una prima base: primary text, headline, script video e idee visual."),
+        scriptStep("due varianti A/B", "Non pubblicare una sola idea", "Prepara almeno due angoli: uno sul problema e uno sul desiderio."),
+        scriptStep("CTA finale", "Adatta prima di pubblicare", "Usa l'output come bozza strategica e controlla sempre le policy.", pick(ctaBank, plan.seed + 1))
       ]
     },
     {
-      title: "Scenario principiante",
+      title: "Screen recording guidato",
       duration: "30s",
       steps: [
-        `Hook: testo "Parti da zero?" Voice over: "Partire da zero non è il problema. Il problema è partire senza una sequenza chiara."`,
-        `Problema concreto: scena persona davanti al PC. Voice over: "Quando non sai cosa creare, per chi venderlo e come strutturarlo, tutto sembra più grande di quello che è."`,
-        `Mini storia: voice over: "Così rimandi, guardi altri contenuti e resti fermo alla fase dell'idea."`,
-        `Soluzione: mostra ${c.productName}. Voice over: "Con ${c.productName} segui un percorso pratico per trasformare un'idea in un primo prodotto digitale."`,
-        `Perché funziona: overlay "pochi passaggi, più chiarezza". Voice over: "Ti aiuta a decidere, non solo a raccogliere informazioni."`,
-        `CTA: testo "Inizia senza confusione". Voice over: "Parti con il percorso step by step."`
+        scriptStep("registrazione del form", "Dal brief alla bozza", "Inserisci prodotto, pubblico, problema e beneficio: il tool non deve copiare il brief, deve trasformarlo in angoli utilizzabili."),
+        scriptStep("sezione angoli", "Scegli la direzione", "Puoi lavorare su foglio bianco, obiezione, semplicità o prima versione da testare."),
+        scriptStep("sezione script", "Video facili da produrre", "Le scene sono pensate per Canva, CapCut, HeyGen, InVideo o screen recording."),
+        scriptStep("sezione compliance", "Copy più prudente", "Niente promesse garantite o claim aggressivi: meglio un messaggio credibile da validare."),
+        scriptStep("download TXT", "Esporta e lavora", "Copia la campagna, adattala e confronta i risultati.", pick(ctaBank, plan.seed + 6))
       ]
     }
   ];
 
-  const general: VideoScript[] = [
-    {
-      title: "Copy da testare",
-      duration: "30s",
-      steps: [
-        `Hook: testo "Le ads non partono dal budget". Voice over: "Prima del budget, c'è una cosa da chiarire: il messaggio."`,
-        `Problema concreto: scena annuncio generico. Voice over: "Se il cliente legge una frase vaga, non capisce perché dovrebbe fermarsi."`,
-        `Mini storia: voice over: "Succede spesso: offerta buona, visual curato, ma copy che potrebbe andare bene per chiunque."`,
-        `Soluzione: mostra ${c.productName}. Voice over: "Il tool costruisce primary text, headline, hook e CTA intorno a problema, beneficio e obiezione."`,
-        `Perché funziona: overlay "più varianti, test più chiari". Voice over: "Così confronti angoli diversi invece di cambiare parole a caso."`,
-        `CTA: testo "Prepara il primo test". Voice over: "Genera una versione più chiara e adattala alla tua offerta."`
-      ]
-    },
-    {
-      title: "Offerta leggibile",
-      duration: "30s",
-      steps: [
-        `Hook: testo "Il cliente capisce cosa vendi?" Voice over: "Il tuo annuncio non deve sembrare creativo a tutti i costi. Deve far capire il valore."`,
-        `Problema concreto: scena con testo lungo. Voice over: "Quando il messaggio è confuso, il cliente non arriva nemmeno alla CTA."`,
-        `Mini storia: voice over: "Magari hai scritto tanto, ma manca una promessa semplice e un prossimo passo chiaro."`,
-        `Soluzione: mostra output di ${c.productName}. Voice over: "Parti da testi e script pensati per rendere l'offerta più leggibile."`,
-        `Perché funziona: overlay "problema, promessa, CTA". Voice over: "Sono tre punti semplici, ma cambiano la qualità del test."`,
-        `CTA: testo "Crea la tua ads". Voice over: "Prepara un messaggio più specifico prima del prossimo lancio."`
-      ]
-    }
-  ];
-
-  return rotate(isDigital(c) ? digital : general, seed);
+  remember("scripts", scripts.map((script) => script.title));
+  return rotate(scripts, plan.seed);
 }
 
-function ctas(input: AdsFormInput, seed: number): GeneratedAdsOutput["ctas"] {
+function salesAngles(input: AdsFormInput, plan: GenerationPlan): SalesAngle[] {
   const c = normalizeInput(input);
+  const candidates: SalesAngle[] = [
+    {
+      type: "Angolo problema",
+      title: "Il blocco da rendere visibile",
+      explanation: `Parte dal momento in cui ${c.audienceShort} si ferma perché ${c.normalizedProblem}.`,
+      example: `Apri con uno scenario concreto, poi presenta ${c.productReference} come modo per creare una prima direzione più chiara.`
+    },
+    {
+      type: "Angolo desiderio",
+      title: "Dal desiderio al primo passo",
+      explanation: `Mostra ${c.normalizedDesire} come percorso graduale, non come risultato immediato.`,
+      example: `Il messaggio deve far percepire ordine: cosa fare prima, cosa evitare, quale output usare per iniziare.`
+    },
+    {
+      type: "Angolo semplicità",
+      title: "Meno teoria, più struttura",
+      explanation: `Riduce la complessità e rende l'offerta accessibile senza banalizzarla.`,
+      example: `Costruisci il copy in tre blocchi: frustrazione concreta, nuova prospettiva, invito soft all'azione.`
+    },
+    {
+      type: "Angolo obiezione",
+      title: "Non devo essere esperto",
+      explanation: `Risponde alla paura di non saper usare bene il materiale generato.`,
+      example: `Spiega che l'output è una bozza strategica da adattare, utile per creare varianti e non per saltare il test.`
+    },
+    {
+      type: "Angolo visual",
+      title: "Mostra il risultato, non solo il prodotto",
+      explanation: `Usa ${plan.visualFrame} per rendere tangibile cosa l'utente ottiene.`,
+      example: `Suggerisci un visual con schermata dell'output, mockup del risultato e micro-testo leggibile in overlay.`
+    },
+    {
+      type: "Angolo comparativo",
+      title: "Prima bozza disordinata vs output ordinato",
+      explanation: `Confronto moderato, senza promesse aggressive o trasformazioni certe.`,
+      example: `Mostra il passaggio da appunti sparsi a sezioni chiare: hook, headline, script, prompt visual.`
+    }
+  ];
 
-  if (isDigital(c)) {
-    return {
-      directSale: rotate(["Inizia dal tuo primo prodotto", "Accedi alla guida pratica", "Parti con il percorso step by step"], seed),
-      whatsappDm: rotate(["Scrivi “DIGITALE” e capiamo da quale idea partire", "Mandaci la tua idea e troviamo il primo passo"], seed),
-      digitalDownload: rotate(["Crea la tua prima idea digitale", `Sblocca ${c.productName}`, "Prepara il tuo primo prodotto"], seed).slice(0, 2),
-      urgency: rotate(["Prima di perdere altre settimane, scegli una direzione", "Inizia senza confusione", "Trasforma gli appunti in un primo piano"], seed),
-      retargeting: rotate(["Riparti dal primo passo concreto", "Hai già l'idea: ora mettila in ordine"], seed)
-    };
-  }
+  const selected = uniqueBySimilarity(rotate(candidates, plan.seed).map((angle) => angle.title), sessionMemory.angles, 0.55).slice(0, 5);
+  remember("angles", selected);
+  return candidates.filter((angle) => selected.includes(angle.title)).slice(0, 5);
+}
 
+function ctas(input: AdsFormInput, plan: GenerationPlan): GeneratedAdsOutput["ctas"] {
+  const c = normalizeInput(input);
+  const direct = isDigital(c) ? [...digitalCtas, ...expandCtas(c, plan)] : [...ctaBank, ...expandCtas(c, plan)];
   return {
-    directSale: rotate(["Prepara il primo test", "Crea un messaggio più chiaro", "Rendi l'offerta più vendibile"], seed),
-    whatsappDm: rotate(["Scrivici e partiamo dalla tua offerta", "Mandaci il prodotto e troviamo l'angolo giusto"], seed),
-    digitalDownload: rotate(["Scarica la base e adattala alla tua campagna", "Crea testi e script per il prossimo lancio"], seed),
-    urgency: rotate(["Sistema il copy prima di mettere budget", "Prepara la campagna prima del lancio", "Scegli l'angolo da testare oggi"], seed),
-    retargeting: rotate(["Torna con un messaggio più specifico", "Riprova con un angolo più chiaro"], seed)
+    directSale: finalizeItems(rotate(direct, plan.seed), c, "ctas", 3, 55),
+    whatsappDm: finalizeItems(rotate([
+      "Scrivici con il tuo brief",
+      "Mandaci l'offerta da chiarire",
+      "Apri la chat e partiamo dal messaggio",
+      "Invia prodotto e pubblico"
+    ], plan.seed), c, "ctas", 2, 55),
+    digitalDownload: finalizeItems(rotate([
+      "Scarica la base e adattala",
+      "Copia i materiali del lancio",
+      "Prepara script e prompt",
+      "Esporta la campagna"
+    ], plan.seed), c, "ctas", 2, 55),
+    urgency: finalizeItems(rotate([
+      "Prepara il copy prima del budget",
+      "Scegli l'angolo da testare oggi",
+      "Crea una variante prima del lancio",
+      "Metti ordine prima di pubblicare"
+    ], plan.seed), c, "ctas", 3, 55),
+    retargeting: finalizeItems(rotate([
+      "Riparti da un messaggio più chiaro",
+      "Rivedi l'offerta con un nuovo angolo",
+      "Torna con una variante più specifica",
+      "Confronta un nuovo hook"
+    ], plan.seed), c, "ctas", 2, 55)
   };
 }
 
-function canvaPrompts(input: AdsFormInput, seed: number): PromptCanva[] {
+function canvaPrompts(input: AdsFormInput, plan: GenerationPlan): PromptCanva[] {
   const c = normalizeInput(input);
   const prompts: PromptCanva[] = [
     {
-      title: "Visual problema-soluzione",
-      format: "1080x1350 per Meta e Instagram Feed",
-      style: "premium pulito, fondo chiaro, accento blu e nero, gerarchia forte",
-      visualText: isDigital(c) ? "“Da idea confusa a primo prodotto digitale”" : `“${limit(c.normalizedProblem, 46)}”`,
-      elements: `${c.visualSubject}, freccia prima/dopo, etichette brevi`,
-      mood: "professionale, concreto, rassicurante",
-      visualCta: isDigital(c) ? "Parti dal primo prodotto" : "Prepara il primo test"
+      title: "Visual problema-soluzione moderato",
+      format: "1080x1350 per feed Meta e Instagram",
+      style: "layout premium chiaro, due colonne, accento blu/viola, testo grande leggibile",
+      visualText: isDigital(c) ? "Da idee sparse a prima direzione" : "Prima chiarisci il messaggio",
+      elements: `${c.visualSubject}, freccia soft, box checklist, mockup output`,
+      mood: "professionale, concreto, non aggressivo",
+      visualCta: pick(ctaBank, plan.seed)
     },
     {
-      title: "Checklist prima del lancio",
+      title: "Checklist salvabile",
       format: "1080x1920 per Stories, Reels e TikTok",
-      style: "editoriale moderno con blocchi bianchi e dettagli viola",
-      visualText: isDigital(c) ? "“Idea, pubblico, offerta”" : "“Problema, promessa, CTA”",
-      elements: "checklist, evidenziatore, mockup del percorso o dell'output",
-      mood: "pratico, rapido, orientato all'azione",
-      visualCta: isDigital(c) ? "Inizia senza confusione" : "Crea la tua ads"
+      style: "sfondo chiaro, card sovrapposte, icone check, headline in alto",
+      visualText: "Hook, promessa, CTA, visual",
+      elements: "quattro righe checklist, screenshot del risultato, badge 'bozza da testare'",
+      mood: "pratico e utile",
+      visualCta: "Copia e adatta"
     },
     {
-      title: "Confronto prima/dopo",
+      title: "Mockup output",
       format: "1200x628 per Facebook Feed e landing",
-      style: "split layout pulito, sinistra grigio chiaro, destra blu intenso",
-      visualText: isDigital(c) ? "“Da mille idee a una direzione”" : "“Da copy vago a messaggio chiaro”",
-      elements: "due colonne, appunti confusi a sinistra, percorso ordinato a destra",
-      mood: "chiaro, deciso, credibile",
-      visualCta: isDigital(c) ? "Accedi alla guida" : "Genera varianti"
+      style: "dashboard minimal con card bianche e bordo sottile",
+      visualText: "Campagna pronta da adattare",
+      elements: "sezioni hook, primary text, headline, script e prompt visual",
+      mood: "SaaS premium, ordinato, credibile",
+      visualCta: "Prepara il test"
     }
   ];
-  return rotate(prompts, seed);
+  return rotate(prompts, plan.seed);
 }
 
-function heygenPrompts(input: AdsFormInput, seed: number): string[] {
+function heygenPrompts(input: AdsFormInput, plan: GenerationPlan): string[] {
   const c = normalizeInput(input);
-  const items = isDigital(c)
-    ? [
-        `Parla in modo naturale. “Vuoi creare un prodotto digitale ma non sai da dove partire? ${c.productName} ti guida passo dopo passo: scegli una direzione, metti ordine nelle idee e costruisci la tua prima offerta. Non serve avere tutto chiaro: serve iniziare dal primo passo giusto.”`,
-        `Video avatar credibile. “Se continui a guardare tutorial ma non costruisci nulla, forse ti manca un percorso. Con ${c.productName} parti da zero e trasformi un'idea in un primo prodotto digitale, senza perderti tra mille consigli.”`
-      ]
-    : [
-        `Parla in modo diretto. “Prima di lanciare una campagna, chiarisci il messaggio. ${c.productName} ti aiuta a creare primary text, headline, hook e CTA più specifici, così puoi testare un annuncio meno generico e più facile da capire.”`,
-        `Video avatar naturale. “Un'offerta può essere valida e sembrare debole se il copy non spiega bene il valore. Parti da problema, promessa e CTA: ${c.productName} ti aiuta a creare una prima versione da adattare.”`
-      ];
-
-  return rotate(items.map((item) => limit(item, 420)), seed);
+  return finalizeItems(rotate([
+    `Avatar naturale, tono ${c.toneLabel}. Spiega che il problema non è creare una frase bella, ma chiarire angolo, promessa e CTA. Presenta ${c.productReference} come base da adattare e testare, senza claim assoluti.`,
+    `Video parlato credibile. Apri con uno scenario: ${c.normalizedProblem}. Poi mostra il passaggio a hook, headline e script ordinati. Chiudi invitando a creare una prima bozza e controllare le policy prima di pubblicare.`,
+    `Avatar frontale, stile consulente pratico. Racconta in modo semplice come trasformare un brief vago in materiali promozionali: primary text, hook video, prompt Canva e campagna pronta da adattare.`
+  ], plan.seed), c, "structures", 2, 420);
 }
 
-function invideoPrompts(input: AdsFormInput, seed: number): string[] {
+function invideoPrompts(input: AdsFormInput, plan: GenerationPlan): string[] {
   const c = normalizeInput(input);
-  const prompts = isDigital(c)
-    ? [
-        `Crea un video verticale da 15 secondi. Ritmo rapido ma pulito. Scene: persona al PC, appunti confusi, mockup di ${c.productName}, checklist "idea, pubblico, offerta". Overlay: "Vuoi vendere online?", "Troppe idee?", "Parti dal primo prodotto digitale". Musica moderna e sobria. CTA finale: "Accedi alla guida pratica".`,
-        `Crea un video ads da 20 secondi per Reels/TikTok. Scene semplici: scroll di tutorial, persona che chiude le schede, percorso step by step, schermata finale. Overlay: "Meno confusione", "Più direzione", "Da idea a prodotto". CTA finale: "Inizia senza confusione".`
-      ]
-    : [
-        `Crea un video ads dinamico da 15 secondi per ${c.platformLabel}. Scene: annuncio vago, promessa evidenziata, output con headline e CTA, schermata finale. Overlay: "Il copy è chiaro?", "Problema + promessa", "Prepara il primo test". Musica moderna e leggera. CTA finale: "Crea la tua ads".`,
-        `Crea un video verticale da 20 secondi. Ritmo medio, stile premium chiaro. Scene: offerta su laptop, copy barrato, nuove varianti, CTA finale. Overlay: "Non cambiare solo visual", "Testa un angolo diverso", "Rendi l'offerta leggibile".`
-      ];
-
-  return rotate(prompts, seed);
+  return finalizeItems(rotate([
+    `Crea un video verticale da 15 secondi. Ritmo pulito, scene semplici: appunti disordinati, output ordinato, due varianti A/B, CTA finale. Overlay: "Prima chiarisci il messaggio", "Hook + script + prompt", "Copia e adatta". Musica moderna sobria.`,
+    `Crea un video ads da 20 secondi con screen recording. Mostra compilazione del form, generazione output, zoom su campagna pronta. Testi overlay brevi, sottotitoli leggibili, CTA finale: "${pick(ctaBank, plan.seed)}".`,
+    `Crea un video faceless con b-roll laptop e checklist. Scene: problema quotidiano, nuova prospettiva, output del tool, nota compliance. Tono premium, niente promesse aggressive, CTA soft finale.`
+  ], plan.seed), c, "structures", 2);
 }
 
-function creativeIdeas(input: AdsFormInput, seed: number): CreativeIdea[] {
+function creativeIdeas(input: AdsFormInput, plan: GenerationPlan): CreativeIdea[] {
   const c = normalizeInput(input);
-  const ideas: CreativeIdea[] = isDigital(c)
-    ? [
-        { category: "Faceless", idea: `Scrivania con appunti: da "mille idee" a una mappa semplice per il primo prodotto digitale.` },
-        { category: "Faceless", idea: `B-roll al PC con overlay: "Non ti manca un'altra idea, ti manca una direzione".` },
-        { category: "Faceless", idea: `Checklist animata: idea, pubblico, promessa, prima offerta.` },
-        { category: "Screen recording", idea: `Mostra il percorso di ${c.productName} e zoom sui passaggi principali.` },
-        { category: "Screen recording", idea: `Da appunti sparsi a struttura del primo prodotto digitale.` },
-        { category: "Screen recording", idea: `Creazione di una prima offerta con titoli e moduli ordinati.` },
-        { category: "Testimonianza/risultato", idea: `Persona racconta: "Avevo idee, ma non sapevo quale trasformare in prodotto".` },
-        { category: "Testimonianza/risultato", idea: `Mini risultato: da confusione iniziale a prima direzione chiara.` },
-        { category: "Comparativa prima/dopo", idea: `Prima: tutorial salvati. Dopo: percorso step by step.` },
-        { category: "Comparativa prima/dopo", idea: `Prima: idea vaga. Dopo: pubblico, promessa e prima offerta.` }
-      ]
-    : [
-        { category: "Faceless", idea: `Schermata con copy vago barrato e nuova promessa più specifica.` },
-        { category: "Faceless", idea: `B-roll di laptop con overlay: "Prima sistema il messaggio".` },
-        { category: "Faceless", idea: `Checklist animata: problema, beneficio, obiezione, CTA.` },
-        { category: "Screen recording", idea: `Generazione di primary text e headline per ${c.productName}.` },
-        { category: "Screen recording", idea: `Zoom su 3 angoli diversi per la stessa offerta.` },
-        { category: "Screen recording", idea: `Prima/dopo tra frase generica e messaggio più vendibile.` },
-        { category: "Testimonianza/risultato", idea: `Cliente racconta: "Avevo l'offerta, ma non sapevo come raccontarla".` },
-        { category: "Testimonianza/risultato", idea: `Mini caso: da annuncio confuso a primo test ordinato.` },
-        { category: "Comparativa prima/dopo", idea: `Prima: copy lungo e debole. Dopo: promessa chiara e CTA specifica.` },
-        { category: "Comparativa prima/dopo", idea: `Prima: un solo messaggio. Dopo: 5 angoli da testare.` }
-      ];
+  const ideas: CreativeIdea[] = [
+    { category: "Faceless", idea: `Scrivania con appunti sparsi che diventano una checklist: problema, promessa, CTA, visual.` },
+    { category: "Faceless", idea: `B-roll laptop con overlay: "Prima del budget, chiarisci il messaggio".` },
+    { category: "Faceless", idea: `Mani che evidenziano un brief e poi mostrano output ordinato in card.` },
+    { category: "Screen recording", idea: `Compilazione del form e zoom sulle sezioni: hook, primary text, script e prompt.` },
+    { category: "Screen recording", idea: `Confronto tra due headline e nota su quale testare come variante A/B.` },
+    { category: "Screen recording", idea: `Esportazione TXT e uso del copy dentro una bozza Meta Ads.` },
+    { category: "Testimonianza/risultato", idea: `Utente racconta l'esperienza d'uso: "mi ha aiutato a non partire dal foglio bianco".` },
+    { category: "Testimonianza/risultato", idea: `Mini caso interno: da brief generico a tre angoli più chiari da valutare.` },
+    { category: "Comparativa prima/dopo", idea: `Prima: copy vago. Dopo: bozza con hook, promessa e CTA più leggibili.` },
+    { category: "Comparativa prima/dopo", idea: `Prima: mille idee. Dopo: una campagna pronta da adattare e testare.` }
+  ];
 
-  return rotate(ideas, seed);
+  return rotate(ideas, plan.seed).slice(0, 10);
+}
+
+function complianceNotes(input: AdsFormInput): ComplianceNote[] {
+  const c = normalizeInput(input);
+  const notes = [...complianceDefaults];
+
+  if (["finance", "wellness", "beauty"].includes(c.productCategory)) {
+    notes.unshift({
+      topic: "Categoria sensibile",
+      note: "Usa claim prudenti: evita promesse su guadagni, salute, corpo o trasformazioni certe. Parla di percorso, routine, chiarezza e valutazione consapevole."
+    });
+  }
+
+  if (hasAny(`${input.mainProblem} ${input.mainBenefit}`, ["guadagn", "dimagr", "garant", "ricco", "soldi"])) {
+    notes.unshift({
+      topic: "Claim da moderare",
+      note: "Il brief contiene parole potenzialmente rischiose. Il copy è stato reso più prudente e orientato a test, metodo e aspettative realistiche."
+    });
+  }
+
+  return notes.slice(0, 4);
+}
+
+function abTests(input: AdsFormInput, plan: GenerationPlan): ABTestSuggestion[] {
+  const c = normalizeInput(input);
+  return [
+    ...abTestDefaults,
+    {
+      test: `${plan.angle} vs ${pick(strategicAngles, plan.seed, 4)}`,
+      why: `Permette di capire se il pubblico reagisce meglio a un blocco concreto o a una promessa più pratica.`
+    }
+  ].slice(0, 4);
+}
+
+function chooseBestHeadline(headlines: string[], productName: string): string {
+  const product = simplify(productName);
+  const scored = headlines.map((headline) => {
+    const lower = simplify(headline);
+    let score = 0;
+    if (hasAny(lower, ["idea", "test", "direzione", "messaggio", "offerta", "primo", "chiarezza", "script", "hook"])) score += 5;
+    if (lower === product || lower.includes(product)) score -= 8;
+    if (headline.length <= 38) score += 2;
+    return { headline, score };
+  });
+  return scored.sort((a, b) => b.score - a.score)[0]?.headline || headlines[0];
+}
+
+function cleanScript(script: VideoScript): VideoScript {
+  return { ...script, title: cleanCopy(script.title), steps: script.steps.map(cleanCopy) };
 }
 
 function cleanOutput(output: GeneratedAdsOutput): GeneratedAdsOutput {
@@ -896,57 +1293,53 @@ function cleanOutput(output: GeneratedAdsOutput): GeneratedAdsOutput {
       videoScript: cleanCopy(output.readyCampaign.videoScript),
       canvaPrompt: cleanCopy(output.readyCampaign.canvaPrompt),
       finalCta: cleanCopy(output.readyCampaign.finalCta)
-    }
+    },
+    complianceNotes: output.complianceNotes.map((note) => ({ ...note, note: cleanCopy(note.note) })),
+    abTestSuggestions: output.abTestSuggestions.map((test) => ({ ...test, why: cleanCopy(test.why) }))
   };
-}
-
-function cleanScript(script: VideoScript): VideoScript {
-  return { ...script, title: cleanCopy(script.title), steps: script.steps.map(cleanCopy) };
 }
 
 export function generateAds(input: AdsFormInput): GeneratedAdsOutput {
   const seed = hashInput(input);
+  const plan = buildPlan(input, seed);
   const normalized = normalizeInput(input);
-  const generatedPrimaryTexts = primaryTexts(input, seed);
-  const generatedHeadlines = headlines(input, seed);
-  const generatedDescriptions = descriptions(input, seed);
-  const generatedScripts8 = scripts8(input, seed);
-  const generatedScripts15 = scripts15(input, seed);
-  const generatedScripts30 = scripts30(input, seed);
-  const generatedCanva = canvaPrompts(input, seed);
-  const generatedCtas = ctas(input, seed);
-  const bestScript = generatedScripts8[0] || (isDigital(normalized) ? generatedScripts15[0] : generatedScripts15[0]);
+  const generatedPrimaryTexts = primaryTexts(input, plan);
+  const generatedHeadlines = headlines(input, plan);
+  const generatedDescriptions = descriptions(input, plan);
+  const generatedScripts8 = scripts8(input, plan);
+  const generatedScripts15 = scripts15(input, plan);
+  const generatedScripts30 = scripts30(input, plan);
+  const generatedCanva = canvaPrompts(input, plan);
+  const generatedCtas = ctas(input, plan);
   const bestHeadline = chooseBestHeadline(generatedHeadlines, normalized.productName);
-  const bestDescription =
-    generatedDescriptions.find((item) => hasAny(item, ["guida", "metodo", "test", "chiarezza", "percorso"])) ||
-    generatedDescriptions[0];
-  const bestCta = isDigital(normalized)
-    ? generatedCtas.directSale[0] || "Inizia dal tuo primo prodotto"
-    : generatedCtas.urgency[0] || "Prepara il primo test";
+  const bestCta = generatedCtas.directSale[0] || generatedCtas.urgency[0] || "Prepara il primo test";
 
   return cleanOutput({
-    quickAnalysis: quickAnalysis(input),
-    salesAngles: salesAngles(input, seed),
+    quickAnalysis: quickAnalysis(input, plan),
+    salesAngles: salesAngles(input, plan),
     primaryTexts: generatedPrimaryTexts,
     headlines: generatedHeadlines,
     descriptions: generatedDescriptions,
-    videoHooks: videoHooks(input, seed),
+    videoHooks: videoHooks(input, plan),
     scripts8: generatedScripts8,
     scripts15: generatedScripts15,
     scripts30: generatedScripts30,
     ctas: generatedCtas,
     canvaPrompts: generatedCanva,
-    heygenPrompts: heygenPrompts(input, seed),
-    invideoPrompts: invideoPrompts(input, seed),
-    creativeIdeas: creativeIdeas(input, seed),
+    heygenPrompts: heygenPrompts(input, plan),
+    invideoPrompts: invideoPrompts(input, plan),
+    creativeIdeas: creativeIdeas(input, plan),
     readyCampaign: {
-      primaryText: generatedPrimaryTexts[0],
+      primaryText: chooseBestPrimaryText(generatedPrimaryTexts, normalized.productName),
       headline: bestHeadline,
-      description: bestDescription,
-      videoScript: bestScript.steps.join(" "),
-      canvaPrompt: `${generatedCanva[0].format}. ${generatedCanva[0].style}. Testo: ${generatedCanva[0].visualText}. CTA: ${generatedCanva[0].visualCta}.`,
+      description: generatedDescriptions[0],
+      videoScript: generatedScripts15[0].steps.join(" "),
+      canvaPrompt: `${generatedCanva[0].format}. ${generatedCanva[0].style}. Testo: ${generatedCanva[0].visualText}. Elementi: ${generatedCanva[0].elements}. CTA: ${generatedCanva[0].visualCta}.`,
       finalCta: bestCta
     },
+    complianceNotes: complianceNotes(input),
+    abTestSuggestions: abTests(input, plan),
+    inputQualityScore: qualityScore(input),
     generatedAt: new Intl.DateTimeFormat("it-IT", {
       dateStyle: "medium",
       timeStyle: "short"
