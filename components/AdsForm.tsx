@@ -80,6 +80,9 @@ export function AdsForm({ value, isLoading, validationMessage, onChange, onSubmi
         <p className="mt-2 text-sm leading-6 text-slate-600 sm:text-base">
           Compila i dati principali. Più sei specifico, migliore sarà l’output.
         </p>
+        <p className="mt-2 text-xs font-semibold leading-5 text-slate-500">
+          Il tool genera bozze strategiche: controlla sempre coerenza con la tua offerta e policy della piattaforma prima di pubblicare.
+        </p>
       </div>
 
       {validationMessage ? (
@@ -204,7 +207,7 @@ export function AdsForm({ value, isLoading, validationMessage, onChange, onSubmi
             </button>
           </div>
           <p className="mt-3 text-center text-xs font-semibold leading-5 text-slate-500">
-            Consiglio: parti con l’output essenziale se stai usando il tool da smartphone.
+            Consiglio: parti con l’output essenziale da smartphone, poi rigenera per creare nuove varianti da testare.
           </p>
         </div>
       </div>

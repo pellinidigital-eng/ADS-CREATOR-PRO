@@ -35,6 +35,9 @@ export function Hero({ onGenerateClick, onPreviewClick }: HeroProps) {
             Inserisci prodotto, pubblico e offerta: Ads Creator PRO genera hook, headline, testi Meta Ads, CTA,
             script video e prompt creativi pronti da adattare.
           </p>
+          <p className="mt-3 max-w-2xl text-sm font-semibold leading-6 text-slate-500">
+            Gli output sono bozze strategiche da testare e adattare: niente promesse automatiche, più varianti utili da confrontare.
+          </p>
 
           <div className="mt-8 flex flex-col gap-3 sm:flex-row">
             <button

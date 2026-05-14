@@ -85,6 +85,16 @@ export function outputToText(output: GeneratedAdsOutput): string {
     `Prompt Canva consigliato: ${output.readyCampaign.canvaPrompt}`,
     `CTA finale: ${output.readyCampaign.finalCta}`,
     "",
+    "NOTE COMPLIANCE",
+    output.complianceNotes.map((note) => `- ${note.topic}: ${note.note}`).join("\n"),
+    "",
+    "SUGGERIMENTI A/B TEST",
+    output.abTestSuggestions.map((test) => `- ${test.test}: ${test.why}`).join("\n"),
+    "",
+    "QUALITÀ BRIEF",
+    `${output.inputQualityScore.label} (${output.inputQualityScore.score}/100)`,
+    asBullets(output.inputQualityScore.suggestions),
+    "",
     "Nota: I testi generati sono una base strategica da testare. Le performance dipendono da offerta, creatività, pubblico, budget e landing page."
   ];
 
@@ -187,7 +197,7 @@ export function OutputSection({
             <p className="text-sm font-bold uppercase tracking-normal text-indigo-700">Output generato</p>
             <h2 className="mt-1 text-2xl font-black text-slate-950">La tua campagna pubblicitaria</h2>
             <p className="mt-1 text-sm leading-5 text-slate-500">
-              Generato il {output.generatedAt}. Usa questi testi come base: testa 2/3 varianti e confronta i risultati.
+              Generato il {output.generatedAt}. Gli annunci generati sono bozze strategiche da adattare e testare.
             </p>
           </div>
           <div className="no-print grid grid-cols-2 gap-2 sm:flex">
@@ -238,6 +248,31 @@ export function OutputSection({
             </div>
           ))}
         </dl>
+      </Card>
+
+      <Card
+        id="quality"
+        title="Brief e strategia di test"
+        description="Controlla se il brief è abbastanza specifico prima di investire budget."
+        copiedKey={copiedKey}
+        onCopy={onCopy}
+        text={`${output.inputQualityScore.label} (${output.inputQualityScore.score}/100)\n${asBullets(output.inputQualityScore.suggestions)}\n\n${output.abTestSuggestions.map((test) => `${test.test}: ${test.why}`).join("\n")}`}
+      >
+        <div className="grid gap-3 md:grid-cols-[0.7fr_1.3fr]">
+          <div className="rounded-2xl bg-indigo-50 p-4">
+            <p className="text-sm font-black uppercase text-indigo-700">Qualità brief</p>
+            <p className="mt-2 text-3xl font-black text-slate-950">{output.inputQualityScore.score}/100</p>
+            <p className="mt-1 font-bold text-slate-700">{output.inputQualityScore.label}</p>
+          </div>
+          <div className="rounded-2xl bg-slate-50 p-4">
+            <h4 className="font-black text-slate-950">Suggerimenti rapidi</h4>
+            <ul className="mt-2 space-y-2">
+              {output.inputQualityScore.suggestions.map((suggestion) => (
+                <li key={suggestion} className="leading-6 text-slate-700">{suggestion}</li>
+              ))}
+            </ul>
+          </div>
+        </div>
       </Card>
 
       <Card id="angles" title="2. 5 angoli di vendita" description="Direzioni diverse da testare senza cambiare tutta l’offerta." copiedKey={copiedKey} onCopy={onCopy} text={output.salesAngles.map((a) => `${a.type}: ${a.title}\n${a.explanation}\n${a.example}`).join("\n\n")}>
@@ -334,8 +369,40 @@ export function OutputSection({
         </div>
       </Card>
 
+      <Card
+        id="compliance"
+        title="16. Note compliance e test A/B"
+        description="Promemoria pratici per pubblicare con più prudenza e confrontare varianti reali."
+        copiedKey={copiedKey}
+        onCopy={onCopy}
+        text={`${output.complianceNotes.map((note) => `${note.topic}: ${note.note}`).join("\n")}\n\n${output.abTestSuggestions.map((test) => `${test.test}: ${test.why}`).join("\n")}`}
+      >
+        <div className="grid gap-3 md:grid-cols-2">
+          <div className="rounded-2xl bg-slate-50 p-4">
+            <h4 className="font-black text-slate-950">Note compliance</h4>
+            <ul className="mt-3 space-y-3">
+              {output.complianceNotes.map((note) => (
+                <li key={note.topic} className="leading-6 text-slate-700">
+                  <strong>{note.topic}:</strong> {note.note}
+                </li>
+              ))}
+            </ul>
+          </div>
+          <div className="rounded-2xl bg-slate-50 p-4">
+            <h4 className="font-black text-slate-950">Suggerimenti A/B test</h4>
+            <ul className="mt-3 space-y-3">
+              {output.abTestSuggestions.map((test) => (
+                <li key={test.test} className="leading-6 text-slate-700">
+                  <strong>{test.test}:</strong> {test.why}
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
+      </Card>
+
       <p className="rounded-[22px] border border-slate-200 bg-white p-4 text-sm leading-6 text-slate-500">
-        I testi generati sono una base strategica da testare. Le performance dipendono da offerta, creatività, pubblico, budget e landing page.
+        I testi generati sono una base strategica da testare. Controlla sempre coerenza con offerta e policy della piattaforma. Le performance dipendono da offerta, creatività, pubblico, budget e landing page.
       </p>
     </div>
   );
