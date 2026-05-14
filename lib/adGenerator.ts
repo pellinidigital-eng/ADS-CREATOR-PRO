@@ -325,7 +325,7 @@ const abTestDefaults: ABTestSuggestion[] = [
   }
 ];
 
-const compact = (value?: string | null): string => (value ?? "").trim().replace(/\s+/g, " ").replace(/\.$/, "");
+const compact = (value: string): string => value.trim().replace(/\s+/g, " ").replace(/\.$/, "");
 const lowerFirst = (value: string): string => value ? value.charAt(0).toLowerCase() + value.slice(1) : value;
 const sentenceCase = (value: string): string => value ? value.charAt(0).toUpperCase() + value.slice(1) : value;
 
