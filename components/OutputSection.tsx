@@ -1,6 +1,5 @@
 "use client";
 
-import { Copy, Download, Printer, RefreshCcw, Trash2 } from "lucide-react";
 import type { ReactNode } from "react";
 import type { GeneratedAdsOutput, PromptCanva, SalesAngle, VideoScript } from "@/types/ads";
 
@@ -16,49 +15,55 @@ type OutputSectionProps = {
 
 const asBullets = (items: string[]) => items.map((item) => `- ${item}`).join("\n");
 
+function scriptsToText(scripts: VideoScript[]) {
+  return scripts.map((script) => `${script.title} (${script.duration})\n${asBullets(script.steps)}`).join("\n\n");
+}
+
+function canvaToText(prompt: PromptCanva) {
+  return `${prompt.title}\nFormato: ${prompt.format}\nStile: ${prompt.style}\nTesto visual: ${prompt.visualText}\nElementi: ${prompt.elements}\nAtmosfera: ${prompt.mood}\nCTA visual: ${prompt.visualCta}`;
+}
+
 export function outputToText(output: GeneratedAdsOutput): string {
-  const parts = [
+  return [
     "Ads Creator PRO - Output generato",
     `Generato il: ${output.generatedAt}`,
     "",
-    "ANALISI RAPIDA DELL'ANGOLO DI VENDITA",
+    "ANALISI RAPIDA",
     `Problema percepito: ${output.quickAnalysis.perceivedProblem}`,
     `Desiderio nascosto: ${output.quickAnalysis.hiddenDesire}`,
     `Promessa pubblicitaria: ${output.quickAnalysis.adPromise}`,
-    `Motivo emotivo: ${output.quickAnalysis.emotionalLever}`,
-    `Possibile obiezione: ${output.quickAnalysis.possibleObjection}`,
-    `Risposta all'obiezione: ${output.quickAnalysis.objectionAnswer}`,
+    `Leva emotiva: ${output.quickAnalysis.emotionalLever}`,
+    `Obiezione: ${output.quickAnalysis.possibleObjection}`,
+    `Risposta: ${output.quickAnalysis.objectionAnswer}`,
     "",
-    "5 ANGOLI DI VENDITA",
-    output.salesAngles
-      .map((angle) => `${angle.type} - ${angle.title}\n${angle.explanation}\nEsempio: ${angle.example}`)
-      .join("\n\n"),
+    "ANGOLI DI VENDITA",
+    output.salesAngles.map((angle) => `${angle.type} - ${angle.title}\n${angle.explanation}\nEsempio: ${angle.example}`).join("\n\n"),
     "",
-    "5 PRIMARY TEXT PER META ADS",
+    "PRIMARY TEXT META ADS",
     asBullets(output.primaryTexts),
     "",
-    "10 HEADLINE",
+    "HEADLINE",
     asBullets(output.headlines),
     "",
-    "5 DESCRIZIONI BREVI",
+    "DESCRIZIONI",
     asBullets(output.descriptions),
     "",
-    "10 HOOK PER VIDEO ADS",
+    "HOOK VIDEO",
     `Problema:\n${asBullets(output.videoHooks.problem)}`,
     `Desiderio:\n${asBullets(output.videoHooks.desire)}`,
     `Provocatori:\n${asBullets(output.videoHooks.provocative)}`,
     `Curiosità:\n${asBullets(output.videoHooks.curiosity)}`,
     "",
-    "SCRIPT VIDEO DA 8 SECONDI",
+    "SCRIPT 8 SECONDI",
     scriptsToText(output.scripts8),
     "",
-    "SCRIPT VIDEO DA 15 SECONDI",
+    "SCRIPT 15 SECONDI",
     scriptsToText(output.scripts15),
     "",
-    "SCRIPT VIDEO DA 30 SECONDI",
+    "SCRIPT 30 SECONDI",
     scriptsToText(output.scripts30),
     "",
-    "CTA VARIATIONS",
+    "CTA",
     `Vendita diretta:\n${asBullets(output.ctas.directSale)}`,
     `WhatsApp/DM:\n${asBullets(output.ctas.whatsappDm)}`,
     `Download/acquisto digitale:\n${asBullets(output.ctas.digitalDownload)}`,
@@ -74,39 +79,19 @@ export function outputToText(output: GeneratedAdsOutput): string {
     "PROMPT INVIDEO",
     asBullets(output.invideoPrompts),
     "",
-    "IDEE CREATIVE PER ADS",
+    "IDEE CREATIVE",
     output.creativeIdeas.map((idea) => `- ${idea.category}: ${idea.idea}`).join("\n"),
     "",
     "CAMPAGNA PRONTA DA TESTARE",
     `Primary text: ${output.readyCampaign.primaryText}`,
     `Headline: ${output.readyCampaign.headline}`,
     `Descrizione: ${output.readyCampaign.description}`,
-    `Script video consigliato: ${output.readyCampaign.videoScript}`,
-    `Prompt Canva consigliato: ${output.readyCampaign.canvaPrompt}`,
+    `Script video: ${output.readyCampaign.videoScript}`,
+    `Prompt Canva: ${output.readyCampaign.canvaPrompt}`,
     `CTA finale: ${output.readyCampaign.finalCta}`,
     "",
-    "NOTE COMPLIANCE",
-    output.complianceNotes.map((note) => `- ${note.topic}: ${note.note}`).join("\n"),
-    "",
-    "SUGGERIMENTI A/B TEST",
-    output.abTestSuggestions.map((test) => `- ${test.test}: ${test.why}`).join("\n"),
-    "",
-    "QUALITÀ BRIEF",
-    `${output.inputQualityScore.label} (${output.inputQualityScore.score}/100)`,
-    asBullets(output.inputQualityScore.suggestions),
-    "",
     "Nota: I testi generati sono una base strategica da testare. Le performance dipendono da offerta, creatività, pubblico, budget e landing page."
-  ];
-
-  return parts.join("\n");
-}
-
-function scriptsToText(scripts: VideoScript[]) {
-  return scripts.map((script) => `${script.title} (${script.duration})\n${asBullets(script.steps)}`).join("\n\n");
-}
-
-function canvaToText(prompt: PromptCanva) {
-  return `${prompt.title}\nFormato: ${prompt.format}\nStile: ${prompt.style}\nTesto visual: ${prompt.visualText}\nElementi: ${prompt.elements}\nAtmosfera: ${prompt.mood}\nCTA visual: ${prompt.visualCta}`;
+  ].join("\n");
 }
 
 function Card({
@@ -129,28 +114,16 @@ function Card({
   onCopy: (key: string, text: string) => void;
 }) {
   return (
-    <section
-      className={
-        featured
-          ? "rounded-[24px] border border-indigo-200 bg-gradient-to-br from-white via-indigo-50/70 to-white p-4 shadow-[0_18px_55px_rgba(79,70,229,0.14)] sm:p-5"
-          : "rounded-[22px] border border-slate-200 bg-white p-4 shadow-sm sm:p-5"
-      }
-    >
+    <section className={featured ? "rounded-[24px] border border-indigo-200 bg-indigo-50 p-4 shadow-sm sm:p-5" : "rounded-[22px] border border-slate-200 bg-white p-4 shadow-sm sm:p-5"}>
       <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <div className="flex flex-wrap items-center gap-2">
-            <h3 className="text-lg font-black text-slate-950">{title}</h3>
-            {featured ? (
-              <span className="rounded-full bg-indigo-600 px-3 py-1 text-xs font-black text-white">Consigliata</span>
-            ) : null}
-          </div>
+          <h3 className="text-lg font-black text-slate-950">{title}</h3>
           {description ? <p className="mt-1 text-sm leading-5 text-slate-500">{description}</p> : null}
         </div>
         <button
           onClick={() => onCopy(id, text)}
-          className="no-print inline-flex min-h-10 shrink-0 items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm font-black text-slate-700 transition hover:border-indigo-200 hover:text-indigo-700"
+          className="no-print inline-flex min-h-10 items-center justify-center rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm font-black text-slate-700"
         >
-          <Copy className="h-4 w-4" />
           {copiedKey === id ? "Copiato!" : "Copia sezione"}
         </button>
       </div>
@@ -170,10 +143,7 @@ export function OutputSection({
 }: OutputSectionProps) {
   if (!output) {
     return (
-      <div
-        id="output-preview"
-        className="rounded-[24px] border border-dashed border-slate-300 bg-white/90 p-6 text-center shadow-[0_18px_45px_rgba(15,23,42,0.06)]"
-      >
+      <div id="output-preview" className="rounded-[24px] border border-dashed border-slate-300 bg-white p-6 text-center shadow-sm">
         <p className="text-xl font-black text-slate-950">Qui apparirà la tua campagna</p>
         <p className="mx-auto mt-2 max-w-xl text-sm leading-6 text-slate-600 sm:text-base">
           Compila il form e genera testi, hook, script, CTA, prompt visual e una campagna pronta da copiare.
@@ -191,56 +161,44 @@ export function OutputSection({
 
   return (
     <div id="output-preview" className="print-area space-y-5">
-      <div className="rounded-[24px] border border-slate-200 bg-white p-4 shadow-[0_18px_55px_rgba(15,23,42,0.08)] sm:p-5">
+      <div className="rounded-[24px] border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
           <div>
-            <p className="text-sm font-bold uppercase tracking-normal text-indigo-700">Output generato</p>
+            <p className="text-sm font-bold uppercase text-indigo-700">Output generato</p>
             <h2 className="mt-1 text-2xl font-black text-slate-950">La tua campagna pubblicitaria</h2>
             <p className="mt-1 text-sm leading-5 text-slate-500">
-              Generato il {output.generatedAt}. Gli annunci generati sono bozze strategiche da adattare e testare.
+              Usa questi testi come base: testa 2/3 varianti e confronta i risultati.
             </p>
           </div>
-          <div className="no-print grid grid-cols-2 gap-2 sm:flex">
-            <button onClick={onCopyAll} className="inline-flex min-h-12 items-center justify-center gap-2 rounded-2xl bg-slate-950 px-3 py-2 text-sm font-black text-white">
-              <Copy className="h-4 w-4" />
+          <div className="no-print grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
+            <button onClick={onCopyAll} className="min-h-12 rounded-2xl bg-slate-950 px-3 py-2 text-sm font-black text-white">
               {copiedKey === "all" ? "Copiato!" : "Copia tutto"}
             </button>
-            <button onClick={onDownload} className="inline-flex min-h-12 items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm font-black text-slate-700">
-              <Download className="h-4 w-4" />
+            <button onClick={onDownload} className="min-h-12 rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm font-black text-slate-700">
               Scarica TXT
             </button>
-            <button onClick={() => window.print()} className="inline-flex min-h-12 items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm font-black text-slate-700">
-              <Printer className="h-4 w-4" />
+            <button onClick={() => window.print()} className="min-h-12 rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm font-black text-slate-700">
               PDF
             </button>
-            <button onClick={onRegenerate} className="inline-flex min-h-12 items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm font-black text-slate-700">
-              <RefreshCcw className="h-4 w-4" />
+            <button onClick={onRegenerate} className="min-h-12 rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm font-black text-slate-700">
               Rigenera
             </button>
-            <button onClick={onReset} className="inline-flex min-h-12 items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm font-black text-slate-700">
-              <Trash2 className="h-4 w-4" />
+            <button onClick={onReset} className="min-h-12 rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm font-black text-slate-700">
               Svuota form
             </button>
           </div>
         </div>
       </div>
 
-      <Card
-        id="quick"
-        title="1. Analisi rapida dell’angolo di vendita"
-        description="Il ragionamento strategico dietro messaggi, hook e CTA."
-        copiedKey={copiedKey}
-        onCopy={onCopy}
-        text={Object.values(output.quickAnalysis).join("\n")}
-      >
+      <Card id="quick" title="1. Analisi rapida dell'angolo di vendita" copiedKey={copiedKey} onCopy={onCopy} text={Object.values(output.quickAnalysis).join("\n")}>
         <dl className="grid gap-3">
           {[
             ["Problema percepito", output.quickAnalysis.perceivedProblem],
             ["Desiderio nascosto", output.quickAnalysis.hiddenDesire],
             ["Promessa pubblicitaria", output.quickAnalysis.adPromise],
-            ["Motivo emotivo", output.quickAnalysis.emotionalLever],
+            ["Leva emotiva", output.quickAnalysis.emotionalLever],
             ["Possibile obiezione", output.quickAnalysis.possibleObjection],
-            ["Risposta all’obiezione", output.quickAnalysis.objectionAnswer]
+            ["Risposta all'obiezione", output.quickAnalysis.objectionAnswer]
           ].map(([label, value]) => (
             <div key={label} className="rounded-2xl bg-slate-50 p-3">
               <dt className="text-sm font-black text-slate-950">{label}</dt>
@@ -250,32 +208,7 @@ export function OutputSection({
         </dl>
       </Card>
 
-      <Card
-        id="quality"
-        title="Brief e strategia di test"
-        description="Controlla se il brief è abbastanza specifico prima di investire budget."
-        copiedKey={copiedKey}
-        onCopy={onCopy}
-        text={`${output.inputQualityScore.label} (${output.inputQualityScore.score}/100)\n${asBullets(output.inputQualityScore.suggestions)}\n\n${output.abTestSuggestions.map((test) => `${test.test}: ${test.why}`).join("\n")}`}
-      >
-        <div className="grid gap-3 md:grid-cols-[0.7fr_1.3fr]">
-          <div className="rounded-2xl bg-indigo-50 p-4">
-            <p className="text-sm font-black uppercase text-indigo-700">Qualità brief</p>
-            <p className="mt-2 text-3xl font-black text-slate-950">{output.inputQualityScore.score}/100</p>
-            <p className="mt-1 font-bold text-slate-700">{output.inputQualityScore.label}</p>
-          </div>
-          <div className="rounded-2xl bg-slate-50 p-4">
-            <h4 className="font-black text-slate-950">Suggerimenti rapidi</h4>
-            <ul className="mt-2 space-y-2">
-              {output.inputQualityScore.suggestions.map((suggestion) => (
-                <li key={suggestion} className="leading-6 text-slate-700">{suggestion}</li>
-              ))}
-            </ul>
-          </div>
-        </div>
-      </Card>
-
-      <Card id="angles" title="2. 5 angoli di vendita" description="Direzioni diverse da testare senza cambiare tutta l’offerta." copiedKey={copiedKey} onCopy={onCopy} text={output.salesAngles.map((a) => `${a.type}: ${a.title}\n${a.explanation}\n${a.example}`).join("\n\n")}>
+      <Card id="angles" title="2. 5 angoli di vendita" copiedKey={copiedKey} onCopy={onCopy} text={output.salesAngles.map((a) => `${a.type}: ${a.title}\n${a.explanation}\n${a.example}`).join("\n\n")}>
         <div className="grid gap-3">
           {output.salesAngles.map((angle: SalesAngle) => (
             <article key={angle.type} className="rounded-2xl bg-slate-50 p-3">
@@ -300,7 +233,7 @@ export function OutputSection({
         <TagList items={output.descriptions} />
       </Card>
 
-      <Card id="hooks" title="6. 10 hook per video ads" copiedKey={copiedKey} onCopy={onCopy} text={outputToHooksText(output)}>
+      <Card id="hooks" title="6. 10 hook per video ads" copiedKey={copiedKey} onCopy={onCopy} text={Object.values(output.videoHooks).flat().join("\n")}>
         <div className="grid gap-4 md:grid-cols-2">
           <HookGroup title="Hook problema" items={output.videoHooks.problem} />
           <HookGroup title="Hook desiderio" items={output.videoHooks.desire} />
@@ -313,7 +246,7 @@ export function OutputSection({
       <ScriptCards id="scripts15" title="8. Script video da 15 secondi" scripts={output.scripts15} copiedKey={copiedKey} onCopy={onCopy} />
       <ScriptCards id="scripts30" title="9. Script video da 30 secondi" scripts={output.scripts30} copiedKey={copiedKey} onCopy={onCopy} />
 
-      <Card id="ctas" title="10. CTA variations" copiedKey={copiedKey} onCopy={onCopy} text={outputToCtasText(output)}>
+      <Card id="ctas" title="10. CTA variations" copiedKey={copiedKey} onCopy={onCopy} text={Object.values(output.ctas).flat().join("\n")}>
         <div className="grid gap-3 md:grid-cols-2">
           <HookGroup title="Vendita diretta" items={output.ctas.directSale} />
           <HookGroup title="WhatsApp/DM" items={output.ctas.whatsappDm} />
@@ -358,7 +291,7 @@ export function OutputSection({
         </div>
       </Card>
 
-      <Card id="ready" title="15. Campagna pronta da testare" description="Il blocco migliore da copiare per il primo test." featured copiedKey={copiedKey} onCopy={onCopy} text={Object.values(output.readyCampaign).join("\n")}>
+      <Card id="ready" title="15. Campagna pronta da testare" featured copiedKey={copiedKey} onCopy={onCopy} text={Object.values(output.readyCampaign).join("\n")}>
         <div className="space-y-3 rounded-[20px] bg-slate-950 p-4 text-white">
           <Ready label="Primary text migliore" value={output.readyCampaign.primaryText} />
           <Ready label="Headline migliore" value={output.readyCampaign.headline} />
@@ -369,40 +302,8 @@ export function OutputSection({
         </div>
       </Card>
 
-      <Card
-        id="compliance"
-        title="16. Note compliance e test A/B"
-        description="Promemoria pratici per pubblicare con più prudenza e confrontare varianti reali."
-        copiedKey={copiedKey}
-        onCopy={onCopy}
-        text={`${output.complianceNotes.map((note) => `${note.topic}: ${note.note}`).join("\n")}\n\n${output.abTestSuggestions.map((test) => `${test.test}: ${test.why}`).join("\n")}`}
-      >
-        <div className="grid gap-3 md:grid-cols-2">
-          <div className="rounded-2xl bg-slate-50 p-4">
-            <h4 className="font-black text-slate-950">Note compliance</h4>
-            <ul className="mt-3 space-y-3">
-              {output.complianceNotes.map((note) => (
-                <li key={note.topic} className="leading-6 text-slate-700">
-                  <strong>{note.topic}:</strong> {note.note}
-                </li>
-              ))}
-            </ul>
-          </div>
-          <div className="rounded-2xl bg-slate-50 p-4">
-            <h4 className="font-black text-slate-950">Suggerimenti A/B test</h4>
-            <ul className="mt-3 space-y-3">
-              {output.abTestSuggestions.map((test) => (
-                <li key={test.test} className="leading-6 text-slate-700">
-                  <strong>{test.test}:</strong> {test.why}
-                </li>
-              ))}
-            </ul>
-          </div>
-        </div>
-      </Card>
-
       <p className="rounded-[22px] border border-slate-200 bg-white p-4 text-sm leading-6 text-slate-500">
-        I testi generati sono una base strategica da testare. Controlla sempre coerenza con offerta e policy della piattaforma. Le performance dipendono da offerta, creatività, pubblico, budget e landing page.
+        I testi generati sono una base strategica da testare. Le performance dipendono da offerta, creatività, pubblico, budget e landing page.
       </p>
     </div>
   );
@@ -463,7 +364,8 @@ function ScriptCards({
       <div className="grid gap-3">
         {scripts.map((script) => (
           <article key={script.title} className="rounded-2xl bg-slate-50 p-3">
-            <h4 className="font-black text-slate-950">{script.title} <span className="text-sm text-slate-500">({script.duration})</span></h4>
+            <h4 className="font-black text-slate-950">{script.title}</h4>
+            <p className="text-sm font-bold text-indigo-700">{script.duration}</p>
             <ul className="mt-2 space-y-2">
               {script.steps.map((step) => (
                 <li key={step} className="leading-6 text-slate-700">{step}</li>
@@ -478,28 +380,9 @@ function ScriptCards({
 
 function Ready({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-2xl border border-white/10 bg-white/10 p-3">
-      <p className="text-sm font-black text-blue-200">{label}</p>
+    <div>
+      <p className="text-xs font-black uppercase text-indigo-200">{label}</p>
       <p className="mt-1 leading-6">{value}</p>
     </div>
   );
-}
-
-function outputToHooksText(output: GeneratedAdsOutput) {
-  return [
-    `Hook problema:\n${asBullets(output.videoHooks.problem)}`,
-    `Hook desiderio:\n${asBullets(output.videoHooks.desire)}`,
-    `Hook provocatori:\n${asBullets(output.videoHooks.provocative)}`,
-    `Hook curiosità:\n${asBullets(output.videoHooks.curiosity)}`
-  ].join("\n\n");
-}
-
-function outputToCtasText(output: GeneratedAdsOutput) {
-  return [
-    `Vendita diretta:\n${asBullets(output.ctas.directSale)}`,
-    `WhatsApp/DM:\n${asBullets(output.ctas.whatsappDm)}`,
-    `Download/acquisto digitale:\n${asBullets(output.ctas.digitalDownload)}`,
-    `Urgenza:\n${asBullets(output.ctas.urgency)}`,
-    `Retargeting:\n${asBullets(output.ctas.retargeting)}`
-  ].join("\n\n");
 }
