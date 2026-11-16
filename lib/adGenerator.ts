@@ -152,13 +152,14 @@ function makeScripts(base: ReturnType<typeof pickBase>) {
   return { scripts8, scripts15, scripts30 };
 }
 
-function makeCtas() {
+function makeCtas(base: ReturnType<typeof pickBase>) {
+  const name = base.productName;
   return {
-    directSale: ["Prepara la tua campagna", "Crea la prima bozza", "Accedi alla base pronta"],
-    whatsappDm: ["Scrivimi per partire", "Chiedi il link del tool", "Mandami la tua offerta"],
-    digitalDownload: ["Scarica e adatta i testi", "Accedi al tool digitale", "Parti dal template operativo"],
-    urgency: ["Usa il prezzo lancio", "Prepara il test oggi", "Blocca l'accesso al tool"],
-    retargeting: ["Riparti da una bozza chiara", "Torna alla tua campagna", "Rivedi gli angoli da testare"]
+    directSale: [`Scopri ${name}`, `Richiedi informazioni su ${name}`, "Verifica disponibilità e dettagli"],
+    whatsappDm: [`Chiedi informazioni su ${name}`, `Scrivici per conoscere ${name}`, "Parla con noi"],
+    digitalDownload: [`Scopri come ottenere ${name}`, `Consulta i dettagli di ${name}`, "Verifica il formato disponibile"],
+    urgency: [`Scopri ${name}`, "Verifica le condizioni attuali", "Richiedi informazioni"],
+    retargeting: [`Riscopri ${name}`, `Valuta il beneficio: ${base.benefit}`, "Rivedi i dettagli"]
   };
 }
 
@@ -194,18 +195,16 @@ function makeCanvaPrompts(base: ReturnType<typeof pickBase>): PromptCanva[] {
   ];
 }
 
-function makeCreativeIdeas(): CreativeIdea[] {
+function makeCreativeIdeas(base: ReturnType<typeof pickBase>): CreativeIdea[] {
   return [
-    { category: "Faceless", idea: "Mostra una schermata con appunti confusi che diventa una campagna ordinata." },
-    { category: "Faceless", idea: "Usa solo mani, tastiera e overlay testuali con hook e CTA." },
-    { category: "Faceless", idea: "Crea un carosello con problema, errore comune, soluzione e CTA." },
-    { category: "Screen recording", idea: "Registra la compilazione del form e il risultato finale generato." },
-    { category: "Screen recording", idea: "Zoom su headline, primary text e script video già divisi in sezioni." },
-    { category: "Screen recording", idea: "Mostra il prima/dopo tra documento vuoto e output completo." },
-    { category: "Testimonianza/risultato", idea: "Video parlato: racconta come hai ottenuto una prima bozza più ordinata." },
-    { category: "Testimonianza/risultato", idea: "Mostra tre varianti create e spiega quale testeresti per prima." },
-    { category: "Prima/dopo", idea: "Prima: frase generica. Dopo: hook, beneficio e CTA più chiari." },
-    { category: "Prima/dopo", idea: "Prima: mille idee sparse. Dopo: una campagna pronta da adattare." }
+    { category: "Faceless", idea: `Mostra una situazione reale collegata a "${base.problem}" e presenta ${base.productName}.` },
+    { category: "Faceless", idea: `Carosello per ${base.audience}: problema, beneficio "${base.benefit}", invito a scoprire ${base.productName}.` },
+    { category: "Faceless", idea: `Tre dettagli verificabili di ${base.productName} con immagini autentiche.` },
+    { category: "Dimostrazione", idea: `Mostra ${base.productName} in uso, solo se una dimostrazione reale è disponibile.` },
+    { category: "Dimostrazione", idea: `Spiega come ${base.productName} può contribuire a "${base.desire}" senza promettere risultati garantiti.` },
+    { category: "Domande frequenti", idea: `Rispondi a un dubbio reale di ${base.audience} su ${base.productName}.` },
+    { category: "Prova reale", idea: `Mostra un caso verificabile relativo a ${base.productName}; non inventare testimonianze.` },
+    { category: "Confronto", idea: `Confronta il problema "${base.problem}" con il beneficio dichiarato "${base.benefit}".` }
   ];
 }
 
@@ -217,7 +216,7 @@ export function generateAds(input: AdsFormInput): GeneratedAdsOutput {
   const descriptions = makeDescriptions(base);
   const videoHooks = makeHooks(base);
   const scripts = makeScripts(base);
-  const ctas = makeCtas();
+  const ctas = makeCtas(base);
   const canvaPrompts = makeCanvaPrompts(base);
   const heygenPrompts = [
     `Parla in modo naturale a ${base.audience}. Apri con il blocco principale, presenta ${base.productName} come base pratica da adattare e chiudi con una CTA concreta.`,
@@ -227,7 +226,7 @@ export function generateAds(input: AdsFormInput): GeneratedAdsOutput {
     "Video ads breve e dinamico: ritmo veloce, scene con documento vuoto, appunti sparsi, output ordinato, testi overlay grandi e CTA finale.",
     "Crea un video in stile Reels: 3 scene, musica pulita, transizioni leggere, focus su hook, headline, CTA e prompt creativi generati."
   ];
-  const creativeIdeas = makeCreativeIdeas();
+  const creativeIdeas = makeCreativeIdeas(base);
 
   return {
     quickAnalysis: {
