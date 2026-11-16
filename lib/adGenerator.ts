@@ -102,69 +102,49 @@ function makeHooks(base: ReturnType<typeof pickBase>) {
 
 function makeScripts(base: ReturnType<typeof pickBase>) {
   const scripts8: VideoScript[] = [
-    makeScript("Foglio bianco", "8s", [
-      "Scena 1: schermo vuoto, testo a schermo: 'Non sai cosa scrivere?'",
-      "Scena 2: appunti disordinati, voice over: 'Hai l'offerta, ma manca il messaggio.'",
-      "Scena 3: comparsa del tool, testo: 'Hook, headline e CTA in ordine.'",
-      "Scena 4: CTA: 'Prepara la tua prima campagna.'"
+    makeScript("Problema e prodotto", "8s", [
+      `0–2s: mostra una situazione collegata al problema "${base.problem}".`,
+      `2–4s: testo a schermo: "${base.productName}".`,
+      `4–6s: evidenzia il beneficio dichiarato: "${base.benefit}".`,
+      `6–8s: invito a scoprire ${base.productName} senza promesse non verificate.`
     ]),
-    makeScript("Prima del lancio", "8s", [
-      "Scena 1: calendario con data lancio, testo: 'Prima di pubblicare...'",
-      "Scena 2: evidenzia problema e beneficio.",
-      "Scena 3: mostra una bozza di ads generata.",
-      "Scena 4: CTA: 'Crea una base da testare.'"
-    ]),
-    makeScript("Messaggio chiaro", "8s", [
-      "Scena 1: persona al telefono, testo: 'L'ads non deve essere complicata.'",
-      "Scena 2: tre blocchi: hook, promessa, CTA.",
-      "Scena 3: output ordinato sullo schermo.",
-      "Scena 4: CTA: 'Parti da qui.'"
+    makeScript("Desiderio del pubblico", "8s", [
+      `0–2s: domanda per ${base.audience}: "Vuoi ${base.desire}?"`,
+      `2–4s: mostra ${base.productName} in un contesto realistico.`,
+      `4–6s: testo: "${base.benefit}".`,
+      "6–8s: CTA: 'Scopri i dettagli'."
     ])
   ];
-
   const scripts15: VideoScript[] = [
-    makeScript("Da idea a campagna", "15s", [
-      "Apertura: 'Hai un prodotto da promuovere ma non sai da quale frase partire?'",
-      `Problema: il pubblico sente che ${base.problem}.`,
-      `Promessa: ${base.productName} ti aiuta a creare una prima base di copy da adattare.`,
-      "Esempio: mostra hook, headline, script video e prompt Canva.",
-      "CTA finale: 'Prepara la tua campagna da testare.'"
+    makeScript("Problema, soluzione, invito", "15s", [
+      `0–3s: hook sul problema dichiarato: "${base.problem}".`,
+      `3–6s: mostra una situazione riconoscibile per ${base.audience}.`,
+      `6–11s: presenta ${base.productName} e il beneficio "${base.benefit}" senza aggiungere risultati inventati.`,
+      `11–15s: invita a scoprire ${base.productName}.`
     ]),
-    makeScript("Meno teoria", "15s", [
-      "Apertura: 'Non ti serve un altro documento vuoto.'",
-      "Problema: troppe idee rallentano la scrittura.",
-      "Promessa: parti da angoli e testi già ordinati.",
-      "Dimostrazione: scorri tre varianti di headline.",
-      "CTA finale: 'Crea la tua prima bozza pubblicitaria.'"
-    ]),
-    makeScript("Copy più concreto", "15s", [
-      "Apertura: 'Un annuncio generico costa attenzione.'",
-      "Problema: il beneficio non viene spiegato in modo chiaro.",
-      `Promessa: trasforma ${base.productType} in messaggi più semplici da testare.`,
-      "Esempio: hook problema, primary text e CTA specifica.",
-      "CTA finale: 'Genera varianti da adattare.'"
+    makeScript("Obiettivo concreto", "15s", [
+      `0–3s: apri con il desiderio "${base.desire}".`,
+      `3–7s: presenta ${base.productName} a ${base.audience}.`,
+      `7–12s: illustra il beneficio dichiarato "${base.benefit}" con una scena dimostrabile.`,
+      "12–15s: CTA: 'Scopri come funziona'."
     ])
   ];
-
   const scripts30: VideoScript[] = [
-    makeScript("Scenario realistico", "30s", [
-      "Hook: 'Hai preparato l'offerta, ma ti blocchi quando devi scrivere l'annuncio?'",
-      "Problema concreto: parti da frasi troppo generiche o copi formule viste altrove.",
-      "Mini storia: apri il computer, provi tre headline, nessuna sembra davvero collegata al pubblico.",
-      `Soluzione: ${base.productName} organizza problema, beneficio, hook, CTA e script in una base unica.`,
-      "Perché funziona: ti dà una struttura da rifinire, non una promessa automatica.",
-      "CTA: 'Crea una campagna pronta da adattare e testare.'"
+    makeScript("Storia del cliente", "30s", [
+      `0–5s: mostra una situazione quotidiana di ${base.audience}, senza inventare testimonianze.`,
+      `5–10s: descrivi il problema "${base.problem}".`,
+      `10–17s: presenta ${base.productName} e il suo utilizzo reale.`,
+      `17–24s: collega il beneficio dichiarato "${base.benefit}" al desiderio "${base.desire}".`,
+      "24–30s: CTA: 'Scopri i dettagli', senza urgenza o sconti inventati."
     ]),
-    makeScript("Metodo semplice", "30s", [
-      "Hook: 'Prima di cambiare creatività, controlla il messaggio.'",
-      `Problema concreto: se ${base.audience} non capisce il valore, anche una buona offerta può sembrare debole.`,
-      "Mini storia: molte ads falliscono già nei primi secondi perché non hanno un hook chiaro.",
-      "Soluzione: genera più angoli, headline, testi brevi, script video e prompt creativi.",
-      "Perché funziona: puoi confrontare varianti diverse invece di puntare tutto su una sola idea.",
-      "CTA: 'Prepara il tuo prossimo test pubblicitario.'"
+    makeScript("Dimostrazione del prodotto", "30s", [
+      `0–6s: domanda diretta a ${base.audience} sul problema "${base.problem}".`,
+      `6–13s: inquadra ${base.productName} in uso, solo se è disponibile una dimostrazione reale.`,
+      `13–21s: spiega il beneficio dichiarato "${base.benefit}".`,
+      `21–26s: richiama il risultato desiderato "${base.desire}" senza garantirlo.`,
+      "26–30s: CTA: 'Valuta se fa per te'."
     ])
   ];
-
   return { scripts8, scripts15, scripts30 };
 }
 
