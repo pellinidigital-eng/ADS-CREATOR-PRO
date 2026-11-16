@@ -100,6 +100,10 @@ function makeHooks(base: ReturnType<typeof pickBase>) {
   };
 }
 
+function makeScript(title: string, duration: VideoScript["duration"], steps: string[]): VideoScript {
+  return { title, duration, steps };
+}
+
 function makeScripts(base: ReturnType<typeof pickBase>) {
   const scripts8: VideoScript[] = [
     makeScript("Problema e prodotto", "8s", [
