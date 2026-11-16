@@ -33,7 +33,7 @@ function pickBase(input: AdsFormInput) {
   const problem = clean(input.mainProblem) || "non sanno da dove iniziare";
   const desire = clean(input.audienceDesire) || "ottenere un risultato più chiaro e organizzato";
   const benefit = clean(input.mainBenefit) || "partire da una base pronta da adattare";
-  const offer = clean(input.offer) || "offerta disponibile";
+  const offer = clean(input.offer);
 
   return {
     productType,
@@ -52,7 +52,7 @@ function makeAngles(base: ReturnType<typeof pickBase>): SalesAngle[] {
     { type: "Beneficio", title: "Vantaggio concreto", explanation: `Metti in evidenza il beneficio indicato: ${base.benefit}.`, example: `${base.productName}: ${base.benefit}.` },
     { type: "Desiderio", title: "Risultato desiderato", explanation: `Collega il messaggio al desiderio: ${base.desire}.`, example: `Vuoi ${base.desire}? Scopri ${base.productName}.` },
     { type: "Pubblico", title: "A chi è rivolto", explanation: `Parla direttamente a ${base.audience}.`, example: `Per ${base.audience}: ${base.productName}.` },
-    { type: "Offerta", title: "Condizioni dichiarate", explanation: `Non inventare sconti o disponibilità: ${base.offer}.`, example: `${base.productName}. ${base.offer === "offerta disponibile" ? "Scopri i dettagli dell'offerta." : base.offer}` }
+    { type: "Offerta", title: "Condizioni dichiarate", explanation: base.offer ? `Condizioni indicate dal cliente: ${base.offer}.` : "Nessuna offerta specifica dichiarata.", example: base.offer ? `${base.productName}. ${base.offer}` : `${base.productName}. Scopri i dettagli.` }
   ];
 }
 
@@ -62,7 +62,7 @@ function makePrimaryTexts(base: ReturnType<typeof pickBase>): string[] {
     `${base.productName} si rivolge a ${base.audience}. Il problema: ${base.problem}. Il beneficio: ${base.benefit}.`,
     `Vuoi ${base.desire}? Valuta ${base.productName}: ${base.benefit}.`,
     `Per ${base.audience} che affronta ${base.problem}: scopri ${base.productName}.`,
-    `${base.productName}: ${base.benefit}. ${base.offer === "offerta disponibile" ? "Scopri i dettagli prima di scegliere." : base.offer}`
+    `${base.productName}: ${base.benefit}. ${base.offer || "Scopri i dettagli prima di scegliere."}`
   ];
 }
 
