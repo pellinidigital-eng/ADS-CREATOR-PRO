@@ -166,31 +166,31 @@ function makeCtas(base: ReturnType<typeof pickBase>) {
 function makeCanvaPrompts(base: ReturnType<typeof pickBase>): PromptCanva[] {
   return [
     {
-      title: "Visual prima/dopo",
+      title: "Problema e soluzione",
       format: "1080x1350 feed Meta/Instagram",
-      style: "Pulito, premium, con sfondo chiaro e accento blu/viola",
-      visualText: "Da idea confusa ad ads pronta",
-      elements: "Due colonne: appunti disordinati a sinistra, card ordinata a destra",
-      mood: "Professionale, pratico, rassicurante",
-      visualCta: "Prepara il test"
+      style: "Layout pulito, testo leggibile e fotografie autentiche del prodotto",
+      visualText: `${base.productName}: ${base.benefit}`,
+      elements: `Visual reale di ${base.productName}; evidenziare il problema "${base.problem}" senza inventare prima/dopo`,
+      mood: "Credibile e coerente con l'attività",
+      visualCta: `Scopri ${base.productName}`
     },
     {
-      title: "Mockup campagna",
+      title: "Il prodotto per il suo pubblico",
       format: "1080x1920 Stories/Reels",
-      style: "Dashboard verticale con card bianche e testi leggibili",
-      visualText: "Hook, headline, CTA e script in un unico output",
-      elements: "Telefono, card output, spunte verdi, badge piattaforme",
-      mood: "Moderno e concreto",
-      visualCta: "Crea la tua bozza"
+      style: "Composizione verticale accessibile con pochi elementi e buon contrasto",
+      visualText: `Per ${base.audience}: ${base.productName}`,
+      elements: `Mostrare ${base.productName} in un contesto reale per ${base.audience}; non simulare recensioni`,
+      mood: "Diretto e autentico",
+      visualCta: "Scopri i dettagli"
     },
     {
-      title: "Offerta chiara",
+      title: "Beneficio verificabile",
       format: "1200x628 Facebook Feed",
-      style: "Layout editoriale con headline forte e mini elenco",
+      style: "Layout editoriale semplice con headline e immagine pertinente",
       visualText: base.benefit,
-      elements: "Titolo, tre bullet, prezzo/offerta se presente",
-      mood: "Semplice, diretto, credibile",
-      visualCta: "Scopri la base pronta"
+      elements: `Immagine reale di ${base.productName}; riportare solo condizioni di offerta confermate`,
+      mood: "Chiaro e affidabile",
+      visualCta: `Valuta ${base.productName}`
     }
   ];
 }
@@ -219,12 +219,12 @@ export function generateAds(input: AdsFormInput): GeneratedAdsOutput {
   const ctas = makeCtas(base);
   const canvaPrompts = makeCanvaPrompts(base);
   const heygenPrompts = [
-    `Parla in modo naturale a ${base.audience}. Apri con il blocco principale, presenta ${base.productName} come base pratica da adattare e chiudi con una CTA concreta.`,
-    `Crea un video avatar breve: problema reale, promessa prudente, esempio di output e invito a preparare la prima campagna. Tono ${input.tone.toLowerCase()}.`
+    `Crea un video avatar per ${base.audience} sul prodotto ${base.productName}. Apri con il problema "${base.problem}", illustra soltanto il beneficio dichiarato "${base.benefit}" e invita a scoprire i dettagli. Tono: ${input.tone}. Non inventare testimonianze o risultati.`,
+    `Video breve per ${base.audience}: presenta ${base.productName}, collega il desiderio "${base.desire}" al beneficio "${base.benefit}" senza promettere risultati garantiti. CTA: Scopri ${base.productName}.`
   ];
   const invideoPrompts = [
-    "Video ads breve e dinamico: ritmo veloce, scene con documento vuoto, appunti sparsi, output ordinato, testi overlay grandi e CTA finale.",
-    "Crea un video in stile Reels: 3 scene, musica pulita, transizioni leggere, focus su hook, headline, CTA e prompt creativi generati."
+    `Video ads per ${base.productName}: scena iniziale sul problema "${base.problem}", poi riprese autentiche del prodotto, beneficio "${base.benefit}" e CTA finale. Non usare immagini di altri prodotti.`,
+    `Reels in tre scene rivolto a ${base.audience}: problema "${base.problem}", dimostrazione reale di ${base.productName} se disponibile, desiderio "${base.desire}" e invito a informarsi. Evita dati e sconti inventati.`
   ];
   const creativeIdeas = makeCreativeIdeas(base);
 
