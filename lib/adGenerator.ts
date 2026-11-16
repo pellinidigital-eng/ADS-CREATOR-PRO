@@ -48,99 +48,56 @@ function pickBase(input: AdsFormInput) {
 
 function makeAngles(base: ReturnType<typeof pickBase>): SalesAngle[] {
   return [
-    {
-      type: "Angolo problema",
-      title: "Partire dal blocco reale",
-      explanation: `Mostra il momento in cui il pubblico si ferma perché ${base.problem}.`,
-      example: `Prima di creare nuovi contenuti, chiarisci il messaggio che deve convincere il tuo pubblico.`
-    },
-    {
-      type: "Angolo velocità",
-      title: "Ridurre il tempo di partenza",
-      explanation: `Posiziona ${base.productName} come una scorciatoia pratica per arrivare prima a una bozza utile.`,
-      example: `Passa da appunti sparsi a una prima campagna pronta da sistemare e testare.`
-    },
-    {
-      type: "Angolo semplicità",
-      title: "Meno confusione, più ordine",
-      explanation: `Fai percepire che l'utente non deve diventare esperto per iniziare a scrivere meglio.`,
-      example: `Segui una struttura semplice: problema, promessa, prova e invito all'azione.`
-    },
-    {
-      type: "Angolo risultato",
-      title: "Una base concreta da testare",
-      explanation: `Il beneficio non è una promessa garantita, ma una base più chiara da adattare alla campagna.`,
-      example: `Crea hook, headline e script video senza ripartire ogni volta dal foglio bianco.`
-    },
-    {
-      type: "Angolo confronto prima/dopo",
-      title: "Da idea confusa a messaggio ordinato",
-      explanation: `Confronta lo stato iniziale con un output più leggibile, pratico e pronto da rifinire.`,
-      example: `Prima: tante idee scollegate. Dopo: un messaggio pubblicitario con direzione chiara.`
-    }
+    { type: "Problema", title: "Problema dichiarato", explanation: `Il pubblico ${base.audience} segnala: ${base.problem}.`, example: `Se ${base.problem}, scopri ${base.productName}: ${base.benefit}.` },
+    { type: "Beneficio", title: "Vantaggio concreto", explanation: `Metti in evidenza il beneficio indicato: ${base.benefit}.`, example: `${base.productName}: ${base.benefit}.` },
+    { type: "Desiderio", title: "Risultato desiderato", explanation: `Collega il messaggio al desiderio: ${base.desire}.`, example: `Vuoi ${base.desire}? Scopri ${base.productName}.` },
+    { type: "Pubblico", title: "A chi è rivolto", explanation: `Parla direttamente a ${base.audience}.`, example: `Per ${base.audience}: ${base.productName}.` },
+    { type: "Offerta", title: "Condizioni dichiarate", explanation: `Non inventare sconti o disponibilità: ${base.offer}.`, example: `${base.productName}. ${base.offer === "offerta disponibile" ? "Scopri i dettagli dell'offerta." : base.offer}` }
   ];
 }
 
 function makePrimaryTexts(base: ReturnType<typeof pickBase>): string[] {
   return [
-    `Vuoi promuovere ${base.productName} ma il messaggio non è ancora chiaro? Parti da hook, testo e CTA già strutturati.`,
-    `Il problema spesso non è l'offerta: è spiegare in modo semplice perché vale la pena provarla.`,
-    `Prima di spendere budget, trasforma ${base.productType} in una campagna più ordinata e facile da testare.`,
-    `Hai un pubblico preciso e un beneficio forte? Usa una base pronta per scrivere annunci meno generici.`,
-    `Da idea confusa a prima bozza pubblicitaria: prepara testi, headline e script da adattare.`
+    `Se ${base.problem}, scopri ${base.productName}: ${base.benefit}. Pensato per ${base.audience}.`,
+    `${base.productName} si rivolge a ${base.audience}. Il problema: ${base.problem}. Il beneficio: ${base.benefit}.`,
+    `Vuoi ${base.desire}? Valuta ${base.productName}: ${base.benefit}.`,
+    `Per ${base.audience} che affronta ${base.problem}: scopri ${base.productName}.`,
+    `${base.productName}: ${base.benefit}. ${base.offer === "offerta disponibile" ? "Scopri i dettagli prima di scegliere." : base.offer}`
   ];
 }
 
 function makeHeadlines(base: ReturnType<typeof pickBase>): string[] {
   return [
-    "Da idea ad ads pronta",
-    "Parti senza foglio bianco",
-    "Crea testi più chiari",
-    "Hook e script da testare",
-    "Meno confusione, più copy",
-    "Prepara la tua campagna",
-    "Messaggi pronti da adattare",
-    "Scrivi ads con più ordine",
-    base.productName.length <= 34 ? base.productName : "La prima bozza è pronta",
-    "Testa nuove angolazioni"
-  ];
+    base.productName,
+    `Scopri ${base.productName}`,
+    `Per ${base.audience}`,
+    `Problema: ${base.problem}`,
+    `Obiettivo: ${base.desire}`,
+    `${base.productName}: ${base.benefit}`,
+    `Un vantaggio: ${base.benefit}`,
+    `Valuta ${base.productName}`,
+    `A chi serve ${base.productName}?`,
+    `I dettagli di ${base.productName}`
+  ].map((value) => value.length > 70 ? value.slice(0, 67).trimEnd() + "..." : value);
 }
 
-function makeDescriptions(): string[] {
+function makeDescriptions(base: ReturnType<typeof pickBase>): string[] {
   return [
-    "Base pronta da adattare",
-    "Hook, copy e CTA",
-    "Per Meta, TikTok e Reels",
-    "Script video inclusi",
-    "Prompt creativi inclusi"
+    `${base.productName}: ${base.benefit}`,
+    `Pensato per ${base.audience}`,
+    `Per chi vuole ${base.desire}`,
+    `Scopri ${base.productName}`,
+    `Problema: ${base.problem}`
   ];
 }
 
 function makeHooks(base: ReturnType<typeof pickBase>) {
   return {
-    problem: [
-      `Stai promuovendo, ma il messaggio resta confuso?`,
-      `Il pubblico capisce davvero perché dovrebbe scegliere te?`,
-      `Prima di lanciare, guarda se il tuo copy è chiaro.`
-    ],
-    desire: [
-      `Da appunti sparsi a una campagna più ordinata.`,
-      `Crea una prima bozza senza perdere ore sul testo.`,
-      `Trasforma il beneficio in un messaggio più semplice.`
-    ],
-    provocative: [
-      `Il tuo prodotto potrebbe non essere il problema. Il messaggio sì.`,
-      `Una buona offerta spiegata male sembra meno forte.`
-    ],
-    curiosity: [
-      `Ecco cosa controllare prima di pubblicare una nuova ads.`,
-      `Tre blocchi possono rendere il tuo annuncio più chiaro.`
-    ]
+    problem: [`Ti capita che ${base.problem}?`, `Se ${base.problem}, scopri una possibile soluzione.`, `Per ${base.audience}: come affrontare ${base.problem}?`],
+    desire: [`Vuoi ${base.desire}?`, `Cosa cambierebbe se riuscissi a ${base.desire}?`, `Scopri ${base.productName}: ${base.benefit}.`],
+    provocative: [`Il problema è davvero ${base.problem}?`, `Quanto conta ${base.benefit} per ${base.audience}?`],
+    curiosity: [`Conosci già ${base.productName}?`, `Ecco cosa offre ${base.productName} a ${base.audience}.`]
   };
-}
-
-function makeScript(title: string, duration: VideoScript["duration"], steps: string[]): VideoScript {
-  return { title, duration, steps };
 }
 
 function makeScripts(base: ReturnType<typeof pickBase>) {
@@ -273,7 +230,7 @@ export function generateAds(input: AdsFormInput): GeneratedAdsOutput {
   const salesAngles = makeAngles(base);
   const primaryTexts = makePrimaryTexts(base);
   const headlines = makeHeadlines(base);
-  const descriptions = makeDescriptions();
+  const descriptions = makeDescriptions(base);
   const videoHooks = makeHooks(base);
   const scripts = makeScripts(base);
   const ctas = makeCtas();
@@ -290,12 +247,12 @@ export function generateAds(input: AdsFormInput): GeneratedAdsOutput {
 
   return {
     quickAnalysis: {
-      perceivedProblem: `Il pubblico non cerca solo ${base.productType}: vuole superare il blocco iniziale e capire cosa comunicare per primo.`,
-      hiddenDesire: `Il desiderio reale è ${base.desire}, senza dover diventare esperto di advertising.`,
-      adPromise: `${base.productName} aiuta a trasformare un'idea confusa in una prima base pubblicitaria da adattare e testare.`,
-      emotionalLever: "Chiarezza: ridurre la sensazione di partire ogni volta da zero.",
-      possibleObjection: "Potrebbe sembrare un output troppo generico o poco adatto alla propria offerta.",
-      objectionAnswer: `Per questo il tool usa prodotto, pubblico, problema, beneficio e offerta per creare varianti più specifiche.`
+      perceivedProblem: `Per ${base.audience}, il problema dichiarato è: ${base.problem}.`,
+      hiddenDesire: `Risultato desiderato: ${base.desire}.`,
+      adPromise: `${base.productName}: ${base.benefit}. Verificare che il beneficio sia supportato da prove.`,
+      emotionalLever: `Collegare il problema "${base.problem}" al desiderio "${base.desire}".`,
+      possibleObjection: `Il beneficio "${base.benefit}" potrebbe richiedere dettagli o prove.`,
+      objectionAnswer: `Verificare i dettagli di ${base.productName} prima di pubblicare annunci.`
     },
     salesAngles,
     primaryTexts,
