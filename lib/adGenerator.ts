@@ -238,6 +238,17 @@ export function generateAds(input: AdsFormInput): GeneratedAdsOutput {
     "Retargeting": ctas.retargeting[0]
   };
 
+  // Anche il testo principale della campagna pronta deve rispecchiare
+  // l'obiettivo selezionato; la sola CTA non basta per una campagna lead/DM.
+  const goalPrimaryText: Record<AdsFormInput["campaignGoal"], string> = {
+    "Vendita diretta": primaryTexts[0],
+    "Lead": `Per ${base.audience}: ${base.productName} può aiutare a ${base.benefit}. Vuoi capire se è adatto alla tua situazione? Richiedi informazioni senza impegno.`,
+    "Traffico alla landing": `Scopri come funziona ${base.productName} per ${base.audience}. Il beneficio indicato è: ${base.benefit}. Leggi i dettagli nella pagina dedicata.`,
+    "Messaggi WhatsApp/DM": `Hai domande su ${base.productName}? Se ${base.problem}, scrivici: possiamo spiegarti come funziona e chiarire i dettagli, senza impegno.`,
+    "Lancio prodotto": `Ti presentiamo ${base.productName}, pensato per ${base.audience}. Scopri il beneficio dichiarato: ${base.benefit}. Informati sulle caratteristiche prima di scegliere.`,
+    "Retargeting": `Stai ancora valutando ${base.productName}? Rivedi come può aiutarti a ${base.benefit} e verifica se risponde alle tue esigenze.`
+  };
+
   return {
     quickAnalysis: {
       perceivedProblem: `Per ${base.audience}, il problema dichiarato è: ${base.problem}.`,
@@ -261,7 +272,7 @@ export function generateAds(input: AdsFormInput): GeneratedAdsOutput {
     invideoPrompts,
     creativeIdeas,
     readyCampaign: {
-      primaryText: primaryTexts[0],
+      primaryText: goalPrimaryText[input.campaignGoal],
       headline: headlines[0],
       description: descriptions[0],
       videoScript: scripts.scripts15[0].steps.join(" "),
