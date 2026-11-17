@@ -227,6 +227,16 @@ export function generateAds(input: AdsFormInput): GeneratedAdsOutput {
     `Reels in tre scene rivolto a ${base.audience}: problema "${base.problem}", dimostrazione reale di ${base.productName} se disponibile, desiderio "${base.desire}" e invito a informarsi. Evita dati e sconti inventati.`
   ];
   const creativeIdeas = makeCreativeIdeas(base);
+  // La CTA della campagna pronta deve rispettare l'obiettivo scelto, non
+  // proporre sempre una vendita diretta a chi vuole contatti o traffico.
+  const goalCta: Record<AdsFormInput["campaignGoal"], string> = {
+    "Vendita diretta": ctas.directSale[0],
+    "Lead": `Richiedi informazioni su ${base.productName}`,
+    "Traffico alla landing": `Scopri i dettagli di ${base.productName}`,
+    "Messaggi WhatsApp/DM": ctas.whatsappDm[0],
+    "Lancio prodotto": `Scopri ${base.productName}`,
+    "Retargeting": ctas.retargeting[0]
+  };
 
   return {
     quickAnalysis: {
@@ -256,7 +266,7 @@ export function generateAds(input: AdsFormInput): GeneratedAdsOutput {
       description: descriptions[0],
       videoScript: scripts.scripts15[0].steps.join(" "),
       canvaPrompt: canvaPrompts[0].visualText,
-      finalCta: ctas.directSale[0]
+      finalCta: goalCta[input.campaignGoal]
     },
     generatedAt: new Date().toLocaleString("it-IT")
   };
