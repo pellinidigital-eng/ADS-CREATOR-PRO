@@ -41,6 +41,8 @@ for (const [goal, expectedCta, expectedText] of goals) {
     assert.match(output.readyCampaign.finalCta, expectedCta);
     assert.match(output.readyCampaign.primaryText, expectedText);
     assert.match(output.readyCampaign.primaryText, /Agenda artigianale/);
+    assert.match(output.readyCampaign.primaryText, /professionisti/);
+    assert.match(output.readyCampaign.primaryText, /tenere traccia degli impegni/);
     assert.doesNotMatch(output.readyCampaign.primaryText, /sconto del|spedizione gratuita|garantito al 100%/i);
   });
 }
