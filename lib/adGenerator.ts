@@ -244,9 +244,9 @@ export function generateAds(input: AdsFormInput): GeneratedAdsOutput {
     "Vendita diretta": primaryTexts[0],
     "Lead": `Per ${base.audience}: ${base.productName} può aiutare a ${base.benefit}. Vuoi capire se è adatto alla tua situazione? Richiedi informazioni senza impegno.`,
     "Traffico alla landing": `Scopri come funziona ${base.productName} per ${base.audience}. Il beneficio indicato è: ${base.benefit}. Leggi i dettagli nella pagina dedicata.`,
-    "Messaggi WhatsApp/DM": `Hai domande su ${base.productName}? Se ${base.problem}, scrivici: possiamo spiegarti come funziona e chiarire i dettagli, senza impegno.`,
+    "Messaggi WhatsApp/DM": `Per ${base.audience}: hai domande su ${base.productName}? Se ${base.problem}, scrivici per conoscere il beneficio dichiarato (${base.benefit}) e chiarire i dettagli, senza impegno.`,
     "Lancio prodotto": `Ti presentiamo ${base.productName}, pensato per ${base.audience}. Scopri il beneficio dichiarato: ${base.benefit}. Informati sulle caratteristiche prima di scegliere.`,
-    "Retargeting": `Stai ancora valutando ${base.productName}? Rivedi come può aiutarti a ${base.benefit} e verifica se risponde alle tue esigenze.`
+    "Retargeting": `Per ${base.audience}: stai ancora valutando ${base.productName}? Rivedi come può aiutarti a ${base.benefit} e verifica se risponde alle tue esigenze.`
   };
 
   return {
