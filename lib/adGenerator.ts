@@ -33,7 +33,7 @@ function pickBase(input: AdsFormInput) {
   const problem = clean(input.mainProblem) || "non sanno da dove iniziare";
   const desire = clean(input.audienceDesire) || "ottenere un risultato più chiaro e organizzato";
   const benefit = clean(input.mainBenefit) || "partire da una base pronta da adattare";
-  const offer = clean(input.offer) || "offerta disponibile";
+  const offer = clean(input.offer);
 
   return {
     productType,
@@ -48,94 +48,55 @@ function pickBase(input: AdsFormInput) {
 
 function makeAngles(base: ReturnType<typeof pickBase>): SalesAngle[] {
   return [
-    {
-      type: "Angolo problema",
-      title: "Partire dal blocco reale",
-      explanation: `Mostra il momento in cui il pubblico si ferma perché ${base.problem}.`,
-      example: `Prima di creare nuovi contenuti, chiarisci il messaggio che deve convincere il tuo pubblico.`
-    },
-    {
-      type: "Angolo velocità",
-      title: "Ridurre il tempo di partenza",
-      explanation: `Posiziona ${base.productName} come una scorciatoia pratica per arrivare prima a una bozza utile.`,
-      example: `Passa da appunti sparsi a una prima campagna pronta da sistemare e testare.`
-    },
-    {
-      type: "Angolo semplicità",
-      title: "Meno confusione, più ordine",
-      explanation: `Fai percepire che l'utente non deve diventare esperto per iniziare a scrivere meglio.`,
-      example: `Segui una struttura semplice: problema, promessa, prova e invito all'azione.`
-    },
-    {
-      type: "Angolo risultato",
-      title: "Una base concreta da testare",
-      explanation: `Il beneficio non è una promessa garantita, ma una base più chiara da adattare alla campagna.`,
-      example: `Crea hook, headline e script video senza ripartire ogni volta dal foglio bianco.`
-    },
-    {
-      type: "Angolo confronto prima/dopo",
-      title: "Da idea confusa a messaggio ordinato",
-      explanation: `Confronta lo stato iniziale con un output più leggibile, pratico e pronto da rifinire.`,
-      example: `Prima: tante idee scollegate. Dopo: un messaggio pubblicitario con direzione chiara.`
-    }
+    { type: "Problema", title: "Problema dichiarato", explanation: `Il pubblico ${base.audience} segnala: ${base.problem}.`, example: `Se ${base.problem}, scopri ${base.productName}: ${base.benefit}.` },
+    { type: "Beneficio", title: "Vantaggio concreto", explanation: `Metti in evidenza il beneficio indicato: ${base.benefit}.`, example: `${base.productName}: ${base.benefit}.` },
+    { type: "Desiderio", title: "Risultato desiderato", explanation: `Collega il messaggio al desiderio: ${base.desire}.`, example: `Vuoi ${base.desire}? Scopri ${base.productName}.` },
+    { type: "Pubblico", title: "A chi è rivolto", explanation: `Parla direttamente a ${base.audience}.`, example: `Per ${base.audience}: ${base.productName}.` },
+    { type: "Offerta", title: "Condizioni dichiarate", explanation: base.offer ? `Condizioni indicate dal cliente: ${base.offer}.` : "Nessuna offerta specifica dichiarata.", example: base.offer ? `${base.productName}. ${base.offer}` : `${base.productName}. Scopri i dettagli.` }
   ];
 }
 
 function makePrimaryTexts(base: ReturnType<typeof pickBase>): string[] {
   return [
-    `Vuoi promuovere ${base.productName} ma il messaggio non è ancora chiaro? Parti da hook, testo e CTA già strutturati.`,
-    `Il problema spesso non è l'offerta: è spiegare in modo semplice perché vale la pena provarla.`,
-    `Prima di spendere budget, trasforma ${base.productType} in una campagna più ordinata e facile da testare.`,
-    `Hai un pubblico preciso e un beneficio forte? Usa una base pronta per scrivere annunci meno generici.`,
-    `Da idea confusa a prima bozza pubblicitaria: prepara testi, headline e script da adattare.`
+    `Se ${base.problem}, scopri ${base.productName}: ${base.benefit}. Pensato per ${base.audience}.`,
+    `${base.productName} si rivolge a ${base.audience}. Il problema: ${base.problem}. Il beneficio: ${base.benefit}.`,
+    `Vuoi ${base.desire}? Valuta ${base.productName}: ${base.benefit}.`,
+    `Per ${base.audience} che affronta ${base.problem}: scopri ${base.productName}.`,
+    `${base.productName}: ${base.benefit}. ${base.offer || "Scopri i dettagli prima di scegliere."}`
   ];
 }
 
 function makeHeadlines(base: ReturnType<typeof pickBase>): string[] {
   return [
-    "Da idea ad ads pronta",
-    "Parti senza foglio bianco",
-    "Crea testi più chiari",
-    "Hook e script da testare",
-    "Meno confusione, più copy",
-    "Prepara la tua campagna",
-    "Messaggi pronti da adattare",
-    "Scrivi ads con più ordine",
-    base.productName.length <= 34 ? base.productName : "La prima bozza è pronta",
-    "Testa nuove angolazioni"
-  ];
+    base.productName,
+    `Scopri ${base.productName}`,
+    `Per ${base.audience}`,
+    `Problema: ${base.problem}`,
+    `Obiettivo: ${base.desire}`,
+    `${base.productName}: ${base.benefit}`,
+    `Un vantaggio: ${base.benefit}`,
+    `Valuta ${base.productName}`,
+    `A chi serve ${base.productName}?`,
+    `I dettagli di ${base.productName}`
+  ].map((value) => value.length > 70 ? value.slice(0, 67).trimEnd() + "..." : value);
 }
 
-function makeDescriptions(): string[] {
+function makeDescriptions(base: ReturnType<typeof pickBase>): string[] {
   return [
-    "Base pronta da adattare",
-    "Hook, copy e CTA",
-    "Per Meta, TikTok e Reels",
-    "Script video inclusi",
-    "Prompt creativi inclusi"
+    `${base.productName}: ${base.benefit}`,
+    `Pensato per ${base.audience}`,
+    `Per chi vuole ${base.desire}`,
+    `Scopri ${base.productName}`,
+    `Problema: ${base.problem}`
   ];
 }
 
 function makeHooks(base: ReturnType<typeof pickBase>) {
   return {
-    problem: [
-      `Stai promuovendo, ma il messaggio resta confuso?`,
-      `Il pubblico capisce davvero perché dovrebbe scegliere te?`,
-      `Prima di lanciare, guarda se il tuo copy è chiaro.`
-    ],
-    desire: [
-      `Da appunti sparsi a una campagna più ordinata.`,
-      `Crea una prima bozza senza perdere ore sul testo.`,
-      `Trasforma il beneficio in un messaggio più semplice.`
-    ],
-    provocative: [
-      `Il tuo prodotto potrebbe non essere il problema. Il messaggio sì.`,
-      `Una buona offerta spiegata male sembra meno forte.`
-    ],
-    curiosity: [
-      `Ecco cosa controllare prima di pubblicare una nuova ads.`,
-      `Tre blocchi possono rendere il tuo annuncio più chiaro.`
-    ]
+    problem: [`Ti capita che ${base.problem}?`, `Se ${base.problem}, scopri una possibile soluzione.`, `Per ${base.audience}: come affrontare ${base.problem}?`],
+    desire: [`Vuoi ${base.desire}?`, `Cosa cambierebbe se riuscissi a ${base.desire}?`, `Scopri ${base.productName}: ${base.benefit}.`],
+    provocative: [`Il problema è davvero ${base.problem}?`, `Quanto conta ${base.benefit} per ${base.audience}?`],
+    curiosity: [`Conosci già ${base.productName}?`, `Ecco cosa offre ${base.productName} a ${base.audience}.`]
   };
 }
 
@@ -145,126 +106,105 @@ function makeScript(title: string, duration: VideoScript["duration"], steps: str
 
 function makeScripts(base: ReturnType<typeof pickBase>) {
   const scripts8: VideoScript[] = [
-    makeScript("Foglio bianco", "8s", [
-      "Scena 1: schermo vuoto, testo a schermo: 'Non sai cosa scrivere?'",
-      "Scena 2: appunti disordinati, voice over: 'Hai l'offerta, ma manca il messaggio.'",
-      "Scena 3: comparsa del tool, testo: 'Hook, headline e CTA in ordine.'",
-      "Scena 4: CTA: 'Prepara la tua prima campagna.'"
+    makeScript("Problema e prodotto", "8s", [
+      `0–2s: mostra una situazione collegata al problema "${base.problem}".`,
+      `2–4s: testo a schermo: "${base.productName}".`,
+      `4–6s: evidenzia il beneficio dichiarato: "${base.benefit}".`,
+      `6–8s: invito a scoprire ${base.productName} senza promesse non verificate.`
     ]),
-    makeScript("Prima del lancio", "8s", [
-      "Scena 1: calendario con data lancio, testo: 'Prima di pubblicare...'",
-      "Scena 2: evidenzia problema e beneficio.",
-      "Scena 3: mostra una bozza di ads generata.",
-      "Scena 4: CTA: 'Crea una base da testare.'"
-    ]),
-    makeScript("Messaggio chiaro", "8s", [
-      "Scena 1: persona al telefono, testo: 'L'ads non deve essere complicata.'",
-      "Scena 2: tre blocchi: hook, promessa, CTA.",
-      "Scena 3: output ordinato sullo schermo.",
-      "Scena 4: CTA: 'Parti da qui.'"
+    makeScript("Desiderio del pubblico", "8s", [
+      `0–2s: domanda per ${base.audience}: "Vuoi ${base.desire}?"`,
+      `2–4s: mostra ${base.productName} in un contesto realistico.`,
+      `4–6s: testo: "${base.benefit}".`,
+      "6–8s: CTA: 'Scopri i dettagli'."
     ])
   ];
-
   const scripts15: VideoScript[] = [
-    makeScript("Da idea a campagna", "15s", [
-      "Apertura: 'Hai un prodotto da promuovere ma non sai da quale frase partire?'",
-      `Problema: il pubblico sente che ${base.problem}.`,
-      `Promessa: ${base.productName} ti aiuta a creare una prima base di copy da adattare.`,
-      "Esempio: mostra hook, headline, script video e prompt Canva.",
-      "CTA finale: 'Prepara la tua campagna da testare.'"
+    makeScript("Problema, soluzione, invito", "15s", [
+      `0–3s: hook sul problema dichiarato: "${base.problem}".`,
+      `3–6s: mostra una situazione riconoscibile per ${base.audience}.`,
+      `6–11s: presenta ${base.productName} e il beneficio "${base.benefit}" senza aggiungere risultati inventati.`,
+      `11–15s: invita a scoprire ${base.productName}.`
     ]),
-    makeScript("Meno teoria", "15s", [
-      "Apertura: 'Non ti serve un altro documento vuoto.'",
-      "Problema: troppe idee rallentano la scrittura.",
-      "Promessa: parti da angoli e testi già ordinati.",
-      "Dimostrazione: scorri tre varianti di headline.",
-      "CTA finale: 'Crea la tua prima bozza pubblicitaria.'"
-    ]),
-    makeScript("Copy più concreto", "15s", [
-      "Apertura: 'Un annuncio generico costa attenzione.'",
-      "Problema: il beneficio non viene spiegato in modo chiaro.",
-      `Promessa: trasforma ${base.productType} in messaggi più semplici da testare.`,
-      "Esempio: hook problema, primary text e CTA specifica.",
-      "CTA finale: 'Genera varianti da adattare.'"
+    makeScript("Obiettivo concreto", "15s", [
+      `0–3s: apri con il desiderio "${base.desire}".`,
+      `3–7s: presenta ${base.productName} a ${base.audience}.`,
+      `7–12s: illustra il beneficio dichiarato "${base.benefit}" con una scena dimostrabile.`,
+      "12–15s: CTA: 'Scopri come funziona'."
     ])
   ];
-
   const scripts30: VideoScript[] = [
-    makeScript("Scenario realistico", "30s", [
-      "Hook: 'Hai preparato l'offerta, ma ti blocchi quando devi scrivere l'annuncio?'",
-      "Problema concreto: parti da frasi troppo generiche o copi formule viste altrove.",
-      "Mini storia: apri il computer, provi tre headline, nessuna sembra davvero collegata al pubblico.",
-      `Soluzione: ${base.productName} organizza problema, beneficio, hook, CTA e script in una base unica.`,
-      "Perché funziona: ti dà una struttura da rifinire, non una promessa automatica.",
-      "CTA: 'Crea una campagna pronta da adattare e testare.'"
+    makeScript("Storia del cliente", "30s", [
+      `0–5s: mostra una situazione quotidiana di ${base.audience}, senza inventare testimonianze.`,
+      `5–10s: descrivi il problema "${base.problem}".`,
+      `10–17s: presenta ${base.productName} e il suo utilizzo reale.`,
+      `17–24s: collega il beneficio dichiarato "${base.benefit}" al desiderio "${base.desire}".`,
+      "24–30s: CTA: 'Scopri i dettagli', senza urgenza o sconti inventati."
     ]),
-    makeScript("Metodo semplice", "30s", [
-      "Hook: 'Prima di cambiare creatività, controlla il messaggio.'",
-      `Problema concreto: se ${base.audience} non capisce il valore, anche una buona offerta può sembrare debole.`,
-      "Mini storia: molte ads falliscono già nei primi secondi perché non hanno un hook chiaro.",
-      "Soluzione: genera più angoli, headline, testi brevi, script video e prompt creativi.",
-      "Perché funziona: puoi confrontare varianti diverse invece di puntare tutto su una sola idea.",
-      "CTA: 'Prepara il tuo prossimo test pubblicitario.'"
+    makeScript("Dimostrazione del prodotto", "30s", [
+      `0–6s: domanda diretta a ${base.audience} sul problema "${base.problem}".`,
+      `6–13s: inquadra ${base.productName} in uso, solo se è disponibile una dimostrazione reale.`,
+      `13–21s: spiega il beneficio dichiarato "${base.benefit}".`,
+      `21–26s: richiama il risultato desiderato "${base.desire}" senza garantirlo.`,
+      "26–30s: CTA: 'Valuta se fa per te'."
     ])
   ];
-
   return { scripts8, scripts15, scripts30 };
 }
 
-function makeCtas() {
+function makeCtas(base: ReturnType<typeof pickBase>) {
+  const name = base.productName;
   return {
-    directSale: ["Prepara la tua campagna", "Crea la prima bozza", "Accedi alla base pronta"],
-    whatsappDm: ["Scrivimi per partire", "Chiedi il link del tool", "Mandami la tua offerta"],
-    digitalDownload: ["Scarica e adatta i testi", "Accedi al tool digitale", "Parti dal template operativo"],
-    urgency: ["Usa il prezzo lancio", "Prepara il test oggi", "Blocca l'accesso al tool"],
-    retargeting: ["Riparti da una bozza chiara", "Torna alla tua campagna", "Rivedi gli angoli da testare"]
+    directSale: [`Scopri ${name}`, `Richiedi informazioni su ${name}`, "Verifica disponibilità e dettagli"],
+    whatsappDm: [`Chiedi informazioni su ${name}`, `Scrivici per conoscere ${name}`, "Parla con noi"],
+    digitalDownload: [`Scopri come ottenere ${name}`, `Consulta i dettagli di ${name}`, "Verifica il formato disponibile"],
+    urgency: [`Scopri ${name}`, "Verifica le condizioni attuali", "Richiedi informazioni"],
+    retargeting: [`Riscopri ${name}`, `Valuta il beneficio: ${base.benefit}`, "Rivedi i dettagli"]
   };
 }
 
 function makeCanvaPrompts(base: ReturnType<typeof pickBase>): PromptCanva[] {
   return [
     {
-      title: "Visual prima/dopo",
+      title: "Problema e soluzione",
       format: "1080x1350 feed Meta/Instagram",
-      style: "Pulito, premium, con sfondo chiaro e accento blu/viola",
-      visualText: "Da idea confusa ad ads pronta",
-      elements: "Due colonne: appunti disordinati a sinistra, card ordinata a destra",
-      mood: "Professionale, pratico, rassicurante",
-      visualCta: "Prepara il test"
+      style: "Layout pulito, testo leggibile e fotografie autentiche del prodotto",
+      visualText: `${base.productName}: ${base.benefit}`,
+      elements: `Visual reale di ${base.productName}; evidenziare il problema "${base.problem}" senza inventare prima/dopo`,
+      mood: "Credibile e coerente con l'attività",
+      visualCta: `Scopri ${base.productName}`
     },
     {
-      title: "Mockup campagna",
+      title: "Il prodotto per il suo pubblico",
       format: "1080x1920 Stories/Reels",
-      style: "Dashboard verticale con card bianche e testi leggibili",
-      visualText: "Hook, headline, CTA e script in un unico output",
-      elements: "Telefono, card output, spunte verdi, badge piattaforme",
-      mood: "Moderno e concreto",
-      visualCta: "Crea la tua bozza"
+      style: "Composizione verticale accessibile con pochi elementi e buon contrasto",
+      visualText: `Per ${base.audience}: ${base.productName}`,
+      elements: `Mostrare ${base.productName} in un contesto reale per ${base.audience}; non simulare recensioni`,
+      mood: "Diretto e autentico",
+      visualCta: "Scopri i dettagli"
     },
     {
-      title: "Offerta chiara",
+      title: "Beneficio verificabile",
       format: "1200x628 Facebook Feed",
-      style: "Layout editoriale con headline forte e mini elenco",
+      style: "Layout editoriale semplice con headline e immagine pertinente",
       visualText: base.benefit,
-      elements: "Titolo, tre bullet, prezzo/offerta se presente",
-      mood: "Semplice, diretto, credibile",
-      visualCta: "Scopri la base pronta"
+      elements: `Immagine reale di ${base.productName}; riportare solo condizioni di offerta confermate`,
+      mood: "Chiaro e affidabile",
+      visualCta: `Valuta ${base.productName}`
     }
   ];
 }
 
-function makeCreativeIdeas(): CreativeIdea[] {
+function makeCreativeIdeas(base: ReturnType<typeof pickBase>): CreativeIdea[] {
   return [
-    { category: "Faceless", idea: "Mostra una schermata con appunti confusi che diventa una campagna ordinata." },
-    { category: "Faceless", idea: "Usa solo mani, tastiera e overlay testuali con hook e CTA." },
-    { category: "Faceless", idea: "Crea un carosello con problema, errore comune, soluzione e CTA." },
-    { category: "Screen recording", idea: "Registra la compilazione del form e il risultato finale generato." },
-    { category: "Screen recording", idea: "Zoom su headline, primary text e script video già divisi in sezioni." },
-    { category: "Screen recording", idea: "Mostra il prima/dopo tra documento vuoto e output completo." },
-    { category: "Testimonianza/risultato", idea: "Video parlato: racconta come hai ottenuto una prima bozza più ordinata." },
-    { category: "Testimonianza/risultato", idea: "Mostra tre varianti create e spiega quale testeresti per prima." },
-    { category: "Prima/dopo", idea: "Prima: frase generica. Dopo: hook, beneficio e CTA più chiari." },
-    { category: "Prima/dopo", idea: "Prima: mille idee sparse. Dopo: una campagna pronta da adattare." }
+    { category: "Faceless", idea: `Mostra una situazione reale collegata a "${base.problem}" e presenta ${base.productName}.` },
+    { category: "Faceless", idea: `Carosello per ${base.audience}: problema, beneficio "${base.benefit}", invito a scoprire ${base.productName}.` },
+    { category: "Faceless", idea: `Tre dettagli verificabili di ${base.productName} con immagini autentiche.` },
+    { category: "Dimostrazione", idea: `Mostra ${base.productName} in uso, solo se una dimostrazione reale è disponibile.` },
+    { category: "Dimostrazione", idea: `Spiega come ${base.productName} può contribuire a "${base.desire}" senza promettere risultati garantiti.` },
+    { category: "Domande frequenti", idea: `Rispondi a un dubbio reale di ${base.audience} su ${base.productName}.` },
+    { category: "Prova reale", idea: `Mostra un caso verificabile relativo a ${base.productName}; non inventare testimonianze.` },
+    { category: "Confronto", idea: `Confronta il problema "${base.problem}" con il beneficio dichiarato "${base.benefit}".` }
   ];
 }
 
@@ -273,29 +213,50 @@ export function generateAds(input: AdsFormInput): GeneratedAdsOutput {
   const salesAngles = makeAngles(base);
   const primaryTexts = makePrimaryTexts(base);
   const headlines = makeHeadlines(base);
-  const descriptions = makeDescriptions();
+  const descriptions = makeDescriptions(base);
   const videoHooks = makeHooks(base);
   const scripts = makeScripts(base);
-  const ctas = makeCtas();
+  const ctas = makeCtas(base);
   const canvaPrompts = makeCanvaPrompts(base);
   const heygenPrompts = [
-    `Parla in modo naturale a ${base.audience}. Apri con il blocco principale, presenta ${base.productName} come base pratica da adattare e chiudi con una CTA concreta.`,
-    `Crea un video avatar breve: problema reale, promessa prudente, esempio di output e invito a preparare la prima campagna. Tono ${input.tone.toLowerCase()}.`
+    `Crea un video avatar per ${base.audience} sul prodotto ${base.productName}. Apri con il problema "${base.problem}", illustra soltanto il beneficio dichiarato "${base.benefit}" e invita a scoprire i dettagli. Tono: ${input.tone}. Non inventare testimonianze o risultati.`,
+    `Video breve per ${base.audience}: presenta ${base.productName}, collega il desiderio "${base.desire}" al beneficio "${base.benefit}" senza promettere risultati garantiti. CTA: Scopri ${base.productName}.`
   ];
   const invideoPrompts = [
-    "Video ads breve e dinamico: ritmo veloce, scene con documento vuoto, appunti sparsi, output ordinato, testi overlay grandi e CTA finale.",
-    "Crea un video in stile Reels: 3 scene, musica pulita, transizioni leggere, focus su hook, headline, CTA e prompt creativi generati."
+    `Video ads per ${base.productName}: scena iniziale sul problema "${base.problem}", poi riprese autentiche del prodotto, beneficio "${base.benefit}" e CTA finale. Non usare immagini di altri prodotti.`,
+    `Reels in tre scene rivolto a ${base.audience}: problema "${base.problem}", dimostrazione reale di ${base.productName} se disponibile, desiderio "${base.desire}" e invito a informarsi. Evita dati e sconti inventati.`
   ];
-  const creativeIdeas = makeCreativeIdeas();
+  const creativeIdeas = makeCreativeIdeas(base);
+  // La CTA della campagna pronta deve rispettare l'obiettivo scelto, non
+  // proporre sempre una vendita diretta a chi vuole contatti o traffico.
+  const goalCta: Record<AdsFormInput["campaignGoal"], string> = {
+    "Vendita diretta": ctas.directSale[0],
+    "Lead": `Richiedi informazioni su ${base.productName}`,
+    "Traffico alla landing": `Scopri i dettagli di ${base.productName}`,
+    "Messaggi WhatsApp/DM": ctas.whatsappDm[0],
+    "Lancio prodotto": `Scopri ${base.productName}`,
+    "Retargeting": ctas.retargeting[0]
+  };
+
+  // Anche il testo principale della campagna pronta deve rispecchiare
+  // l'obiettivo selezionato; la sola CTA non basta per una campagna lead/DM.
+  const goalPrimaryText: Record<AdsFormInput["campaignGoal"], string> = {
+    "Vendita diretta": primaryTexts[0],
+    "Lead": `Per ${base.audience}: ${base.productName} può aiutare a ${base.benefit}. Vuoi capire se è adatto alla tua situazione? Richiedi informazioni senza impegno.`,
+    "Traffico alla landing": `Scopri come funziona ${base.productName} per ${base.audience}. Il beneficio indicato è: ${base.benefit}. Leggi i dettagli nella pagina dedicata.`,
+    "Messaggi WhatsApp/DM": `Per ${base.audience}: hai domande su ${base.productName}? Se ${base.problem}, scrivici per conoscere il beneficio dichiarato (${base.benefit}) e chiarire i dettagli, senza impegno.`,
+    "Lancio prodotto": `Ti presentiamo ${base.productName}, pensato per ${base.audience}. Scopri il beneficio dichiarato: ${base.benefit}. Informati sulle caratteristiche prima di scegliere.`,
+    "Retargeting": `Per ${base.audience}: stai ancora valutando ${base.productName}? Rivedi come può aiutarti a ${base.benefit} e verifica se risponde alle tue esigenze.`
+  };
 
   return {
     quickAnalysis: {
-      perceivedProblem: `Il pubblico non cerca solo ${base.productType}: vuole superare il blocco iniziale e capire cosa comunicare per primo.`,
-      hiddenDesire: `Il desiderio reale è ${base.desire}, senza dover diventare esperto di advertising.`,
-      adPromise: `${base.productName} aiuta a trasformare un'idea confusa in una prima base pubblicitaria da adattare e testare.`,
-      emotionalLever: "Chiarezza: ridurre la sensazione di partire ogni volta da zero.",
-      possibleObjection: "Potrebbe sembrare un output troppo generico o poco adatto alla propria offerta.",
-      objectionAnswer: `Per questo il tool usa prodotto, pubblico, problema, beneficio e offerta per creare varianti più specifiche.`
+      perceivedProblem: `Per ${base.audience}, il problema dichiarato è: ${base.problem}.`,
+      hiddenDesire: `Risultato desiderato: ${base.desire}.`,
+      adPromise: `${base.productName}: ${base.benefit}. Verificare che il beneficio sia supportato da prove.`,
+      emotionalLever: `Collegare il problema "${base.problem}" al desiderio "${base.desire}".`,
+      possibleObjection: `Il beneficio "${base.benefit}" potrebbe richiedere dettagli o prove.`,
+      objectionAnswer: `Verificare i dettagli di ${base.productName} prima di pubblicare annunci.`
     },
     salesAngles,
     primaryTexts,
@@ -311,12 +272,12 @@ export function generateAds(input: AdsFormInput): GeneratedAdsOutput {
     invideoPrompts,
     creativeIdeas,
     readyCampaign: {
-      primaryText: primaryTexts[0],
+      primaryText: goalPrimaryText[input.campaignGoal],
       headline: headlines[0],
       description: descriptions[0],
-      videoScript: scripts.scripts15[0].steps.join(" "),
+      videoScript: [...scripts.scripts15[0].steps.slice(0, -1), `11–15s: CTA: "${goalCta[input.campaignGoal]}".`].join(" "),
       canvaPrompt: canvaPrompts[0].visualText,
-      finalCta: ctas.directSale[0]
+      finalCta: goalCta[input.campaignGoal]
     },
     generatedAt: new Date().toLocaleString("it-IT")
   };
