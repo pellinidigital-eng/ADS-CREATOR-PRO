@@ -39,6 +39,8 @@ for (const [goal, expectedCta, expectedText] of goals) {
       mainBenefit: "tenere traccia degli impegni"
     });
     assert.match(output.readyCampaign.finalCta, expectedCta);
+    assert.ok(output.readyCampaign.videoScript.includes(output.readyCampaign.finalCta), "video CTA must match campaign goal");
+    assert.doesNotMatch(output.readyCampaign.videoScript, /11–15s: invita a scoprire/i, "generic sales CTA must not override goal");
     assert.match(output.readyCampaign.primaryText, expectedText);
     assert.match(output.readyCampaign.primaryText, /Agenda artigianale/);
     assert.match(output.readyCampaign.primaryText, /professionisti/);
