@@ -275,7 +275,7 @@ export function generateAds(input: AdsFormInput): GeneratedAdsOutput {
       primaryText: goalPrimaryText[input.campaignGoal],
       headline: headlines[0],
       description: descriptions[0],
-      videoScript: scripts.scripts15[0].steps.join(" "),
+      videoScript: [...scripts.scripts15[0].steps.slice(0, -1), `11–15s: CTA: "${goalCta[input.campaignGoal]}".`].join(" "),
       canvaPrompt: canvaPrompts[0].visualText,
       finalCta: goalCta[input.campaignGoal]
     },
